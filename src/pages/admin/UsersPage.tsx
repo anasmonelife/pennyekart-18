@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -526,19 +526,71 @@ const UsersPage = () => {
         <CustomerList customers={filteredUsers} orderSummaries={orderSummaries} walletSummaries={walletSummaries} onRefresh={fetchData} />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {paginatedUsers.map((u) => (
-              <Card key={u.id}>
-                <CardContent className="space-y-3 p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold">{u.full_name ?? "—"}</p>
-                      {u.customer_id && <p className="font-mono text-[10px] text-primary">{u.customer_id}</p>}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
+          <div className="admin-table-wrap">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email / Mobile</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Seller Type</TableHead>
+                  <TableHead>Approved</TableHead>
+                  <TableHead>Role</TableHead>
+                  {isSuperAdmin && <TableHead>Super Admin</TableHead>}
+                  <TableHead className="w-12">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedUsers.map((u) => (
+                  <TableRow key={u.id}>
+                    <TableCell>
+                      <div>{u.full_name ?? "—"}</div>
+                      {u.customer_id && <div className="text-[10px] font-mono text-primary">{u.customer_id}</div>}
+                    </TableCell>
+                    <TableCell>
+                      <div>{u.email ?? "—"}</div>
+                      {u.mobile_number && <div className="text-xs text-muted-foreground">{u.mobile_number}</div>}
+                    </TableCell>
+                    <TableCell>
                       <Badge variant={getTypeBadgeVariant(u.user_type)}>
                         {USER_TYPE_LABELS[u.user_type] ?? u.user_type}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {u.user_type === "selling_partner" ? (
+                        <Select value={u.seller_type ?? "normal"} onValueChange={(v) => updateSellerType(u.user_id, v)}>
+                          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="normal">Normal Seller</SelectItem>
+                            <SelectItem value="utility">Utility Seller</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Switch checked={u.is_approved} onCheckedChange={() => toggleApproval(u.user_id, u.is_approved)} />
+                    </TableCell>
+                    <TableCell>
+                      {isSuperAdmin ? (
+                        <Select value={u.role_id ?? "none"} onValueChange={(v) => updateRole(u.user_id, v)}>
+                          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No role</SelectItem>
+                            {roles.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge variant="secondary">{roles.find((r) => r.id === u.role_id)?.name ?? "No role"}</Badge>
+                      )}
+                    </TableCell>
+                    {isSuperAdmin && (
+                      <TableCell>
+                        <Switch checked={u.is_super_admin} onCheckedChange={() => toggleSuperAdmin(u.user_id, u.is_super_admin)} />
+                      </TableCell>
+                    )}
+                    <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -561,66 +613,18 @@ const UsersPage = () => {
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </div>
-                  </div>
-
-                  <div className="text-sm">
-                    <p className="truncate">{u.email ?? "—"}</p>
-                    {u.mobile_number && <p className="text-xs text-muted-foreground">{u.mobile_number}</p>}
-                    {u.local_body_name && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {u.local_body_name}{u.ward_number != null ? ` · Ward ${u.ward_number}` : ""}{u.district_name ? ` · ${u.district_name}` : ""}
-                      </p>
-                    )}
-                  </div>
-
-                  {u.user_type === "selling_partner" && (
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Seller Type</Label>
-                      <Select value={u.seller_type ?? "normal"} onValueChange={(v) => updateSellerType(u.user_id, v)}>
-                        <SelectTrigger className="h-8 w-full"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="normal">Normal Seller</SelectItem>
-                          <SelectItem value="utility">Utility Seller</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Role</Label>
-                    {isSuperAdmin ? (
-                      <Select value={u.role_id ?? "none"} onValueChange={(v) => updateRole(u.user_id, v)}>
-                        <SelectTrigger className="h-8 w-full"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No role</SelectItem>
-                          {roles.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Badge variant="secondary">{roles.find((r) => r.id === u.role_id)?.name ?? "No role"}</Badge>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-3">
-                    <div className="flex items-center gap-2">
-                      <Switch checked={u.is_approved} onCheckedChange={() => toggleApproval(u.user_id, u.is_approved)} />
-                      <Label className="text-xs">Approved</Label>
-                    </div>
-                    {isSuperAdmin && (
-                      <div className="flex items-center gap-2">
-                        <Switch checked={u.is_super_admin} onCheckedChange={() => toggleSuperAdmin(u.user_id, u.is_super_admin)} />
-                        <Label className="text-xs">Super Admin</Label>
-                      </div>
-                    )}
-                    {u.is_blocked && <Badge variant="destructive" className="ml-auto">Blocked</Badge>}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            {filteredUsers.length === 0 && (
-              <p className="col-span-full py-8 text-center text-muted-foreground">No users found</p>
-            )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredUsers.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={otherColSpan} className="text-center text-muted-foreground py-8">
+                      No users found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
 
           {/* Pagination */}
