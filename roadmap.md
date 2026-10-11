@@ -1,5 +1,8 @@
 # Roadmap
 
+## Automatic cancellation display
+- [ ] Show delayed-acceptance automatic cancellation badges in customer bookings and utility partner requests; hide customer contacts on those partner requests and run focused checks.
+
 ## Utility My bookings status tabs
 - [x] Split My bookings into Pending and Completed tabs (Cancelled tab appears when a booking was cancelled); counts shown per tab, Pending opens first. Three tab-switching tests and the booking grouping test passed; build OK. Live signed-in booking views remain unverified (external Supabase session unavailable).
 

@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { autoCancelLabel, bookingGroup } from "./utilityServices";
+import { autoCancelLabel, bookingGroup, isAutoCancelledRequest, showUtilityPartnerContact } from "./utilityServices";
+
+describe("automatic cancellation display rules", () => {
+  it("identifies only system-cancelled requests as delayed automatic cancellations", () => {
+    expect(isAutoCancelledRequest({ status: "cancelled", cancelled_by: "system" })).toBe(true);
+    expect(isAutoCancelledRequest({ status: "pending", cancelled_by: "system" })).toBe(false);
+    expect(isAutoCancelledRequest({ status: "cancelled", cancelled_by: "customer" })).toBe(false);
+    expect(isAutoCancelledRequest({ status: "cancelled" })).toBe(false);
+  });
+
+  it("hides partner-side customer contact only for automatically cancelled requests", () => {
+    expect(showUtilityPartnerContact({ status: "cancelled", cancelled_by: "system" })).toBe(false);
+    for (const status of ["pending", "assigned", "in_progress", "completed"]) {
+      expect(showUtilityPartnerContact({ status, cancelled_by: null })).toBe(true);
+    }
+    expect(showUtilityPartnerContact({ status: "cancelled", cancelled_by: "customer" })).toBe(true);
+  });
+});
 
 describe("bookingGroup", () => {
   it("keeps unfinished bookings in the Pending tab", () => {

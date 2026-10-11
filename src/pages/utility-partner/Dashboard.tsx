@@ -26,7 +26,7 @@ import PartnerAvatar from "@/components/partner/PartnerAvatar";
 import logo from "@/assets/logo.png";
 import { useUtilityReminderPause } from "@/lib/utilityReminderPause";
 import {
-  PRICE_UNITS, REQUEST_STATUSES, formatServicePrice, statusLabel, unitsForCategoryType,
+  PRICE_UNITS, REQUEST_STATUSES, formatServicePrice, statusLabel, unitsForCategoryType, isAutoCancelledRequest, showUtilityPartnerContact,
   type UtilityCategory, type UtilityService, type UtilityRequest,
 } from "@/lib/utilityServices";
 
@@ -301,16 +301,16 @@ const UtilityPartnerDashboard = () => {
       <CardContent className="space-y-2 p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="break-words font-semibold">{r.contact_name}</p>
-            <p className="flex items-center gap-1 text-xs text-muted-foreground"><Phone className="h-3 w-3 shrink-0" /><span className="min-w-0 break-words">{r.contact_phone}</span></p>
+            <p className="break-words font-semibold">{showUtilityPartnerContact(r) ? r.contact_name : `Request #${r.id.slice(0, 8)}`}</p>
+            {showUtilityPartnerContact(r) && <p className="flex items-center gap-1 text-xs text-muted-foreground"><Phone className="h-3 w-3 shrink-0" /><span className="min-w-0 break-words">{r.contact_phone}</span></p>}
           </div>
-          <Badge variant="outline" className="max-w-[45%] shrink-0 whitespace-normal break-words">{statusLabel(r.status)}</Badge>
+          <Badge variant={isAutoCancelledRequest(r) ? "destructive" : "outline"} className="max-w-[55%] shrink-0 whitespace-normal break-words">{isAutoCancelledRequest(r) ? "Auto-cancelled · Acceptance delayed" : statusLabel(r.status)}</Badge>
         </div>
         <OrderItemHighlight name={serviceName(r.service_id)} variant={r.variant_label} quantity={r.quantity ?? 1}>
           {!!r.total_amount && <p className="text-sm font-semibold text-primary">₹{Number(r.total_amount)}</p>}
         </OrderItemHighlight>
-        {r.address && <p className="break-words text-sm">{r.address}</p>}
-        {r.latitude != null && r.longitude != null && (
+        {showUtilityPartnerContact(r) && r.address && <p className="break-words text-sm">{r.address}</p>}
+        {showUtilityPartnerContact(r) && r.latitude != null && r.longitude != null && (
           <a
             className="inline-flex items-center gap-1 text-xs font-medium text-primary underline"
             href={`https://www.google.com/maps/search/?api=1&query=${r.latitude},${r.longitude}`}
@@ -321,9 +321,9 @@ const UtilityPartnerDashboard = () => {
           </a>
         )}
         {r.preferred_date && <p className="text-xs text-muted-foreground">Preferred: {r.preferred_date}</p>}
-        {r.notes && <p className="break-words text-xs text-muted-foreground">{r.notes}</p>}
+        {showUtilityPartnerContact(r) && r.notes && <p className="break-words text-xs text-muted-foreground">{r.notes}</p>}
         <div className="grid grid-cols-2 items-center gap-2 pt-2 sm:flex sm:flex-wrap">
-          {r.contact_phone?.replace(/\D/g, "") && (
+          {showUtilityPartnerContact(r) && r.contact_phone?.replace(/\D/g, "") && (
             <Button asChild size="sm" variant="outline" className="h-11">
               <a href={`tel:${r.contact_phone.replace(/\D/g, "")}`}>
                 <Phone className="mr-1.5 h-3.5 w-3.5" /> Call
