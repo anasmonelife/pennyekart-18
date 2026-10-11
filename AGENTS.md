@@ -1,5 +1,7 @@
 # Architecture rules
 
+- Share automatic-cancellation classification and partner contact visibility in utilityServices helpers; keep this presentation-only so booking permissions and actions remain unchanged.
+
 - Keep utility reminder pause timestamps scoped to the signed-in seller in a dedicated client hook; suppress only automatic in-app alerts and their floating reminder while leaving Firebase delivery and request actions unchanged.
 
 - Share the presentation-only OrderItemHighlight across normal and utility seller order views; shared customer/delivery dialogs opt in explicitly so seller styling does not alter other roles or order actions.

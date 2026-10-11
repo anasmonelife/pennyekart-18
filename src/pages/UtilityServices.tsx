@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Wrench, MapPin, Phone, Search, Building2, ChevronRight, Package, Minus, Plus, ShoppingCart, History, RefreshCw, CheckCircle2, Circle } from "lucide-react";
-import { bookingGroup, formatServicePrice, statusLabel, type UtilityCategory, type UtilityRequest, type UtilityService, type UtilityVariant } from "@/lib/utilityServices";
+import { bookingGroup, isAutoCancelledRequest, formatServicePrice, statusLabel, type UtilityCategory, type UtilityRequest, type UtilityService, type UtilityVariant } from "@/lib/utilityServices";
 import { formatAvailability } from "@/components/utility/AvailabilityDialog";
 import AddressFormFields, {
   emptyAddressForm,
@@ -562,8 +562,8 @@ const UtilityServices = () => {
                               {new Date(request.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
                             </p>
                           </div>
-                          <Badge variant={request.status === "completed" ? "default" : cancelled ? "destructive" : "secondary"}>
-                            {statusLabel(request.status)}
+                          <Badge className="max-w-full whitespace-normal" variant={request.status === "completed" ? "default" : cancelled ? "destructive" : "secondary"}>
+                            {isAutoCancelledRequest(request) ? "Auto-cancelled · Acceptance delayed" : statusLabel(request.status)}
                           </Badge>
                         </div>
                         <div className="flex flex-wrap items-start justify-between gap-2 border-t pt-3">
@@ -601,7 +601,7 @@ const UtilityServices = () => {
                           <div className="space-y-3 border-t pt-3" aria-label={`Status tracking for booking ${request.id.slice(0, 8)}`}>
                             {cancelled ? (
                               <p className="text-sm font-medium text-destructive">
-                                {(request as any).cancelled_by === "system"
+                                {isAutoCancelledRequest(request)
                                   ? "This booking was cancelled automatically — the service partner was not available in time. Please try booking again later."
                                   : "This booking was cancelled."}
                               </p>

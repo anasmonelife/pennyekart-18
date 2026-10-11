@@ -128,6 +128,7 @@ export interface UtilityRequest {
   address_id?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  cancelled_by?: string | null;
 }
 
 export interface UtilityVariant {
@@ -148,3 +149,10 @@ export type BookingGroup = "pending" | "completed" | "cancelled";
 /** Which "My bookings" tab a utility request belongs to. */
 export const bookingGroup = (status?: string | null): BookingGroup =>
   status === "completed" ? "completed" : status === "cancelled" ? "cancelled" : "pending";
+
+export const isAutoCancelledRequest = (request: Pick<UtilityRequest, "status" | "cancelled_by">) =>
+  request.status === "cancelled" && request.cancelled_by === "system";
+
+/** Presentation only: do not change request permissions or actions. */
+export const showUtilityPartnerContact = (request: Pick<UtilityRequest, "status" | "cancelled_by">) =>
+  !isAutoCancelledRequest(request);
