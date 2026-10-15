@@ -1,4 +1,4 @@
-import { CheckCircle2, Eye } from "lucide-react";
+import { BellOff, CheckCircle2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import OrderNotificationDialog, { type NotificationOrder } from "@/components/OrderNotificationDialog";
 import DeliveryOrderContact from "./DeliveryOrderContact";
@@ -8,7 +8,7 @@ interface Props {
   open: boolean; onOpenChange: (open: boolean) => void; userId: string;
   pending: NotificationOrder[]; active: NotificationOrder[]; dismissedIds: Set<string>; busyId: string | null;
   onAccept: (id: string) => void; onFinish: (id: string) => void;
-  onLater: (id: string) => void; onDetail: (order: NotificationOrder) => void;
+  onLater: (id: string) => void; onDetail: (order: NotificationOrder) => void; onNotToday: () => void;
 }
 
 export default function DeliveryOrderNotificationDialog(props: Props) {
@@ -26,6 +26,10 @@ export default function DeliveryOrderNotificationDialog(props: Props) {
       </Button>
       <Button variant="outline" className="h-11 w-11 p-0" aria-label={`View order ${order.id.slice(0, 8)}`} title="View order" onClick={() => props.onDetail(order)}><Eye className="h-4 w-4" /></Button>
       {isNew && !props.dismissedIds.has(order.id) && <Button variant="ghost" className="col-span-2 h-10" onClick={() => props.onLater(order.id)}>Later</Button>}
+    </div>}
+    footer={<div className="grid grid-cols-2 gap-2">
+      <Button variant="outline" className="h-11" onClick={() => props.onOpenChange(false)}>Close</Button>
+      <Button className="h-11" onClick={props.onNotToday}><BellOff className="mr-2 h-4 w-4" />Not today</Button>
     </div>}
   />;
 }
