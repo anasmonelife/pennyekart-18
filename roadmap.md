@@ -1,8 +1,8 @@
 # Roadmap
 
 ## Partner notification daily dismissal
-- [ ] Add a user-scoped “Not today” action beside Close in delivery, seller, and utility partner reminder popups.
-- [ ] Verify dismissal persistence, next-day reset, role isolation, and popup actions.
+- [x] Add a user-scoped “Not today” action beside Close in delivery, seller, and utility partner reminder popups.
+- [x] Verify dismissal persistence, next-day reset, role isolation, and utility popup actions with focused automated tests.
 
 ## Automatic cancellation display
 - [x] Show delayed-acceptance automatic cancellation badges in customer bookings and utility partner requests; hide customer names, phones, addresses, map links, notes, and call links on those partner requests. Source inspection and 13 focused tests passed. Live signed-in views remain unverified (external Supabase session unavailable).

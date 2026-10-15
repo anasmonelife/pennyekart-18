@@ -1,4 +1,4 @@
-import { Check, CheckCircle2, MapPin, Phone, XCircle } from "lucide-react";
+import { BellOff, Check, CheckCircle2, MapPin, Phone, XCircle } from "lucide-react";
 import OrderItemHighlight from "@/components/selling-partner/OrderItemHighlight";
 import { NotificationDialogFrame } from "@/components/OrderNotificationDialog";
 import { Button } from "@/components/ui/button";
@@ -67,10 +67,13 @@ export default function UtilityRequestNotificationDialog({ open, onOpenChange, r
                 <XCircle className="mr-2 h-4 w-4" />Cancel request
               </Button>
             )}
-            <Button variant="ghost" className="h-10" onClick={() => (onRemindLater ? onRemindLater() : onOpenChange(false))}>Remind me later</Button>
           </div>
         </article>
       );})}
+      footer={<div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" className="h-11" onClick={() => onOpenChange(false)}>Close</Button>
+        <Button className="h-11" onClick={() => (onRemindLater ? onRemindLater() : onOpenChange(false))}><BellOff className="mr-2 h-4 w-4" />Not today</Button>
+      </div>}
     </NotificationDialogFrame>
   );
 }

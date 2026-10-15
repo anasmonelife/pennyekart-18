@@ -23,7 +23,9 @@ describe("UtilityRequestNotificationDialog", () => {
     expect(screen.getByRole("link", { name: "Open location on map" })).toHaveAttribute("href", "https://www.google.com/maps/search/?api=1&query=10,76");
     fireEvent.click(screen.getByRole("button", { name: "Accept request" }));
     expect(onAccept).toHaveBeenCalledWith(request.id);
-    fireEvent.click(screen.getByRole("button", { name: "Remind me later" }));
+    fireEvent.click(screen.getByRole("button", { name: "Not today" }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+    fireEvent.click(screen.getAllByRole("button", { name: "Close" })[0]);
+    expect(onOpenChange).toHaveBeenCalledTimes(2);
   });
 });

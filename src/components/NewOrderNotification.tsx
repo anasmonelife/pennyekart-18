@@ -2,11 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import OrderNotificationDialog from "@/components/OrderNotificationDialog";
 import { Button } from "@/components/ui/button";
-import { Bell, Eye, CheckCircle2 } from "lucide-react";
+import { Bell, BellOff, Eye, CheckCircle2 } from "lucide-react";
 import OrderDetailDialog from "@/components/OrderDetailDialog";
 import DeliveryOrderNotificationDialog from "@/components/delivery/DeliveryOrderNotificationDialog";
 import { useToast } from "@/hooks/use-toast";
 import { sellerReminderGroup, SELLER_REMINDER_INTERVAL } from "@/lib/sellerOrderReminders";
+import { areDailyRemindersDismissed, dismissDailyReminders } from "@/lib/dailyReminderDismissal";
 
 interface PendingOrder {
   id: string;
@@ -48,6 +49,7 @@ const NewOrderNotification = ({ userId, role, onAccept, onRefresh }: Props) => {
   const [detailOrder, setDetailOrder] = useState<PendingOrder | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const prevCountRef = useRef(0);
+  const reminderDateRef = useRef(new Date().toDateString());
   const lastSellerAlertRef = useRef(0);
   const previousSellerIdsRef = useRef<Set<string>>(new Set());
   const previousNewIdsRef = useRef<Set<string>>(new Set());
@@ -77,10 +79,19 @@ const NewOrderNotification = ({ userId, role, onAccept, onRefresh }: Props) => {
 
   const applyOrders = useCallback(
     (all: PendingOrder[]) => {
+      const today = new Date().toDateString();
+      if (reminderDateRef.current !== today) {
+        reminderDateRef.current = today;
+        prevCountRef.current = 0;
+        lastSellerAlertRef.current = 0;
+        previousSellerIdsRef.current.clear();
+        previousNewIdsRef.current.clear();
+      }
       const pending = all.filter((o) => PENDING_STATUSES[role].includes(o.status));
       const active = all.filter((o) => role === "seller" ? sellerReminderGroup(o.status) === "unfinished" : IN_PROGRESS_STATUSES[role].includes(o.status));
       const fresh = pending.filter((o) => !dismissedIds.has(o.id));
       const now = Date.now();
+      const remindersDismissed = areDailyRemindersDismissed(role, userId);
       if (role === "seller") {
         // New orders and unfinished orders alert in separate windows.
         const newOrderAlert = fresh.some((o) => !previousNewIdsRef.current.has(o.id));
@@ -88,11 +99,11 @@ const NewOrderNotification = ({ userId, role, onAccept, onRefresh }: Props) => {
           active.some((o) => !previousSellerIdsRef.current.has(o.id)) ||
           now - lastSellerAlertRef.current >= SELLER_REMINDER_INTERVAL
         );
-        if (newOrderAlert) { playSound(); setNewOpen(true); }
-        if (pendingAlert) { playSound(); setPendingOpen(true); lastSellerAlertRef.current = now; }
+        if (!remindersDismissed && newOrderAlert) { playSound(); setNewOpen(true); }
+        if (!remindersDismissed && pendingAlert) { playSound(); setPendingOpen(true); lastSellerAlertRef.current = now; }
         previousNewIdsRef.current = new Set(fresh.map((o) => o.id));
         previousSellerIdsRef.current = new Set(active.map((o) => o.id));
-      } else if (fresh.length > 0 && fresh.length > prevCountRef.current) {
+      } else if (!remindersDismissed && fresh.length > 0 && fresh.length > prevCountRef.current) {
         playSound();
         setOpen(true);
       }
@@ -100,7 +111,7 @@ const NewOrderNotification = ({ userId, role, onAccept, onRefresh }: Props) => {
       setPendingOrders(pending);
       setInProgressOrders(active);
     },
-    [role, dismissedIds]
+    [role, userId, dismissedIds]
   );
 
   const fetchPending = useCallback(async () => {
@@ -176,6 +187,18 @@ const NewOrderNotification = ({ userId, role, onAccept, onRefresh }: Props) => {
     setDismissedIds((prev) => new Set([...prev, orderId]));
   };
 
+  const handleNotToday = () => {
+    dismissDailyReminders(role, userId);
+    setOpen(false);
+    setNewOpen(false);
+    setPendingOpen(false);
+  };
+
+  const reminderFooter = (onClose: () => void) => <div className="grid grid-cols-2 gap-2">
+    <Button variant="outline" className="h-11" onClick={onClose}>Close</Button>
+    <Button className="h-11" onClick={handleNotToday}><BellOff className="mr-2 h-4 w-4" />Not today</Button>
+  </div>;
+
   const undismissedOrders = pendingOrders.filter((o) => !dismissedIds.has(o.id));
   const totalBadge = (role === "seller" ? pendingOrders.length : undismissedOrders.length) + inProgressOrders.length;
 
@@ -241,7 +264,7 @@ const NewOrderNotification = ({ userId, role, onAccept, onRefresh }: Props) => {
       {role === "delivery" ? <DeliveryOrderNotificationDialog
         open={open} onOpenChange={setOpen} userId={userId} pending={pendingOrders} active={inProgressOrders}
         dismissedIds={dismissedIds} busyId={busyId} onAccept={handleAccept} onFinish={handleFinish}
-        onLater={handleDismiss} onDetail={setDetailOrder}
+        onLater={handleDismiss} onDetail={setDetailOrder} onNotToday={handleNotToday}
       /> : <>
         <OrderNotificationDialog
           highlightItems
@@ -250,6 +273,7 @@ const NewOrderNotification = ({ userId, role, onAccept, onRefresh }: Props) => {
           open={newOpen} onOpenChange={setNewOpen} title="New orders"
           pending={pendingOrders} dismissedIds={dismissedIds}
           renderActions={sellerActions}
+          footer={reminderFooter(() => setNewOpen(false))}
         />
         <OrderNotificationDialog
           highlightItems
@@ -259,6 +283,7 @@ const NewOrderNotification = ({ userId, role, onAccept, onRefresh }: Props) => {
           open={pendingOpen} onOpenChange={setPendingOpen} title="Pending orders"
           pending={inProgressOrders} dismissedIds={dismissedIds}
           renderActions={sellerActions}
+          footer={reminderFooter(() => setPendingOpen(false))}
         />
       </>}
       <OrderDetailDialog highlightItems={role === "seller"} order={detailOrder} open={!!detailOrder} onOpenChange={(v) => { if (!v) setDetailOrder(null); }} />

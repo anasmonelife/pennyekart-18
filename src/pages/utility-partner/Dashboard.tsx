@@ -25,6 +25,7 @@ import OrderItemHighlight from "@/components/selling-partner/OrderItemHighlight"
 import PartnerAvatar from "@/components/partner/PartnerAvatar";
 import logo from "@/assets/logo.png";
 import { useUtilityReminderPause } from "@/lib/utilityReminderPause";
+import { areDailyRemindersDismissed, dismissDailyReminders } from "@/lib/dailyReminderDismissal";
 import {
   PRICE_UNITS, REQUEST_STATUSES, formatServicePrice, statusLabel, unitsForCategoryType, isAutoCancelledRequest, showUtilityPartnerContact,
   type UtilityCategory, type UtilityService, type UtilityRequest,
@@ -175,18 +176,26 @@ const UtilityPartnerDashboard = () => {
   }, [profile?.user_id, services.length]);
 
   // Popup when a new pending request arrives, and on every page load/refresh
-  // while pending requests exist — unless the seller tapped "Remind me later" today.
+  // while requests exist — unless the partner dismissed reminders for today.
   // New requests and unfinished requests open in separate windows.
-  const dismissedToday = () => localStorage.getItem("utility_popup_dismissed_date") === new Date().toDateString();
   const remindLater = () => {
-    localStorage.setItem("utility_popup_dismissed_date", new Date().toDateString());
+    dismissDailyReminders("utility", profile?.user_id);
     setAlertGroup(null);
   };
   const newAlertIdsRef = useRef<Set<string>>(new Set());
   const pendingAlertIdsRef = useRef<Set<string>>(new Set());
   const lastAlertRef = useRef(0);
+  const reminderDateRef = useRef(new Date().toDateString());
   useEffect(() => {
     if (!profile?.user_id || remindersPaused) return;
+    const today = new Date().toDateString();
+    if (reminderDateRef.current !== today) {
+      reminderDateRef.current = today;
+      prevPendingRef.current = -1;
+      lastAlertRef.current = 0;
+      newAlertIdsRef.current.clear();
+      pendingAlertIdsRef.current.clear();
+    }
     const fresh = requests.filter((r) => r.status === "pending");
     const unfinished = requests.filter((r) => UTILITY_UNFINISHED_STATUSES.includes(r.status));
     const hasNewId = fresh.some((r) => !newAlertIdsRef.current.has(r.id));
@@ -196,12 +205,14 @@ const UtilityPartnerDashboard = () => {
     const count = fresh.length + unfinished.length;
     if (count === 0) { prevPendingRef.current = count; return; }
     const due = Date.now() - lastAlertRef.current >= SELLER_REMINDER_INTERVAL;
-    if (hasNewId || (prevPendingRef.current === -1 && fresh.length > 0)) {
-      setAlertGroup("new");
-      lastAlertRef.current = Date.now();
-    } else if (unfinished.length > 0 && (hasNewUnfinishedId || due) && !(dismissedToday() && !hasNewUnfinishedId)) {
-      setAlertGroup("pending");
-      lastAlertRef.current = Date.now();
+    if (!areDailyRemindersDismissed("utility", profile.user_id)) {
+      if (hasNewId || (prevPendingRef.current === -1 && fresh.length > 0)) {
+        setAlertGroup("new");
+        lastAlertRef.current = Date.now();
+      } else if (unfinished.length > 0 && (hasNewUnfinishedId || due)) {
+        setAlertGroup("pending");
+        lastAlertRef.current = Date.now();
+      }
     }
     prevPendingRef.current = count;
   }, [requests, remindersPaused, profile?.user_id]);
@@ -614,7 +625,7 @@ const UtilityPartnerDashboard = () => {
       {(() => {
         const unfinishedCount = requests.filter((r) => UTILITY_UNFINISHED_STATUSES.includes(r.status)).length;
         const total = pending + unfinishedCount;
-         if (total === 0 || alertGroup !== null || remindersPaused) return null;
+        if (total === 0 || alertGroup !== null || remindersPaused) return null;
         return (
           <Button
             aria-label={`Open service request notifications (${total})`}
