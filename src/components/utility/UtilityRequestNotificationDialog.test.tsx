@@ -25,7 +25,7 @@ describe("UtilityRequestNotificationDialog", () => {
     expect(onAccept).toHaveBeenCalledWith(request.id);
     fireEvent.click(screen.getByRole("button", { name: "Not today" }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Close" })[0]);
     expect(onOpenChange).toHaveBeenCalledTimes(2);
   });
 });
