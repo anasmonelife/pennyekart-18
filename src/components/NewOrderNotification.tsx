@@ -49,6 +49,7 @@ const NewOrderNotification = ({ userId, role, onAccept, onRefresh }: Props) => {
   const [detailOrder, setDetailOrder] = useState<PendingOrder | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const prevCountRef = useRef(0);
+  const reminderDateRef = useRef(new Date().toDateString());
   const lastSellerAlertRef = useRef(0);
   const previousSellerIdsRef = useRef<Set<string>>(new Set());
   const previousNewIdsRef = useRef<Set<string>>(new Set());
@@ -78,6 +79,14 @@ const NewOrderNotification = ({ userId, role, onAccept, onRefresh }: Props) => {
 
   const applyOrders = useCallback(
     (all: PendingOrder[]) => {
+      const today = new Date().toDateString();
+      if (reminderDateRef.current !== today) {
+        reminderDateRef.current = today;
+        prevCountRef.current = 0;
+        lastSellerAlertRef.current = 0;
+        previousSellerIdsRef.current.clear();
+        previousNewIdsRef.current.clear();
+      }
       const pending = all.filter((o) => PENDING_STATUSES[role].includes(o.status));
       const active = all.filter((o) => role === "seller" ? sellerReminderGroup(o.status) === "unfinished" : IN_PROGRESS_STATUSES[role].includes(o.status));
       const fresh = pending.filter((o) => !dismissedIds.has(o.id));

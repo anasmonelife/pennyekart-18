@@ -185,8 +185,17 @@ const UtilityPartnerDashboard = () => {
   const newAlertIdsRef = useRef<Set<string>>(new Set());
   const pendingAlertIdsRef = useRef<Set<string>>(new Set());
   const lastAlertRef = useRef(0);
+  const reminderDateRef = useRef(new Date().toDateString());
   useEffect(() => {
     if (!profile?.user_id || remindersPaused) return;
+    const today = new Date().toDateString();
+    if (reminderDateRef.current !== today) {
+      reminderDateRef.current = today;
+      prevPendingRef.current = -1;
+      lastAlertRef.current = 0;
+      newAlertIdsRef.current.clear();
+      pendingAlertIdsRef.current.clear();
+    }
     const fresh = requests.filter((r) => r.status === "pending");
     const unfinished = requests.filter((r) => UTILITY_UNFINISHED_STATUSES.includes(r.status));
     const hasNewId = fresh.some((r) => !newAlertIdsRef.current.has(r.id));
