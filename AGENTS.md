@@ -15,3 +15,4 @@
 - Use NotificationDialogFrame for admin, seller, delivery, and utility booking alerts; default to blue and opt seller unfinished reminders into orange inside the portal so other roles and order actions stay unchanged.
 - Keep utility-service FCM delivery in an authenticated Edge Function that verifies request ownership, resolves the provider server-side, and deduplicates sends so customer clients cannot choose recipients.
 - Keep utility booking history reads scoped to the signed-in customer through the existing request ownership policies, so other customers' contact details remain private.
+- Share per-user, per-role daily reminder dismissal across delivery, seller, and utility popup flows; keep it client-side and separate from booking/order actions.
