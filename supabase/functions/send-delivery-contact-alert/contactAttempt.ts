@@ -4,5 +4,8 @@ export const CONTACT_ATTEMPT_MESSAGE =
 
 const CLOSED_STATUSES = new Set(["delivered", "cancelled", "return_confirmed"]);
 
+export const isAssignedDeliveryStaff = (assignedStaffId: string | null, callerId: string) =>
+  assignedStaffId !== null && assignedStaffId === callerId;
+
 export const canRecordContactAttempt = (status: string, attemptedAt: string | null) =>
-  !attemptedAt && !CLOSED_STATUSES.has(status);
+  !attemptedAt && !CLOSED_STATUSES.has(status) && !status.startsWith("return_");
