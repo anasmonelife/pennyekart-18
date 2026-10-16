@@ -1190,6 +1190,7 @@ export type Database = {
           assigned_delivery_staff_id: string | null
           created_at: string
           delivery_charge: number
+          delivery_contact_attempted_at: string | null
           delivery_push_sent_at: string | null
           godown_id: string | null
           id: string
@@ -1208,6 +1209,7 @@ export type Database = {
           assigned_delivery_staff_id?: string | null
           created_at?: string
           delivery_charge?: number
+          delivery_contact_attempted_at?: string | null
           delivery_push_sent_at?: string | null
           godown_id?: string | null
           id?: string
@@ -1226,6 +1228,7 @@ export type Database = {
           assigned_delivery_staff_id?: string | null
           created_at?: string
           delivery_charge?: number
+          delivery_contact_attempted_at?: string | null
           delivery_push_sent_at?: string | null
           godown_id?: string | null
           id?: string
@@ -2835,6 +2838,7 @@ export type Database = {
           assigned_delivery_staff_id: string | null
           created_at: string
           delivery_charge: number
+          delivery_contact_attempted_at: string | null
           delivery_push_sent_at: string | null
           godown_id: string | null
           id: string
