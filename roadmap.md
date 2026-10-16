@@ -1,5 +1,9 @@
 # Roadmap
 
+## Delivery staff customer contact alert
+- [ ] Add a one-time assigned-staff action that records the contact attempt and sends an in-app order notice plus Firebase push.
+- [ ] Show the notice on the customer's active order and support push deep links; verify assignment checks and repeat prevention.
+
 ## Partner notification daily dismissal
 - [x] Add a user-scoped “Not today” action beside Close in delivery, seller, and utility partner reminder popups.
 - [x] Verify dismissal persistence, next-day reset, role isolation, and utility popup actions with focused automated tests.

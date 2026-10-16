@@ -22,6 +22,7 @@ interface Order {
   items: any;
   user_id: string | null;
   seller_id?: string | null;
+  delivery_contact_attempted_at?: string | null;
 }
 
 const STATUS_FLOW = ["pending", "accepted", "pickup", "shipped", "delivered"];
@@ -37,7 +38,15 @@ interface Props {
 const DeliveryOrders = ({ orders, userId, onRefresh, quickFilter }: Props) => {
   const { toast } = useToast();
   const contacts = useDeliveryContacts(orders.map((order) => order.id), userId);
-  const renderContact = (id: string) => <DeliveryOrderContact contact={contacts.data?.[id]} loading={contacts.isLoading} error={contacts.isError} />;
+  const renderContact = (order: Order) => <DeliveryOrderContact
+    contact={contacts.data?.[order.id]}
+    loading={contacts.isLoading}
+    error={contacts.isError}
+    orderId={order.id}
+    orderStatus={order.status}
+    attemptedAt={order.delivery_contact_attempted_at ?? null}
+    onAttemptSent={onRefresh}
+  />;
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
@@ -226,7 +235,7 @@ const DeliveryOrders = ({ orders, userId, onRefresh, quickFilter }: Props) => {
               <Badge variant="secondary">₹{o.total}</Badge>
             </div>
             <p className="text-sm text-muted-foreground">{o.shipping_address || "No address"}</p>
-            {renderContact(o.id)}
+            {renderContact(o)}
             <p className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleString()}{(o as any).delivery_charge ? ` · Delivery ₹${(o as any).delivery_charge}` : ""}</p>
             <Steps flow={flow} current={o.status} labels={STEP_LABELS} />
             <ItemsList order={o} />
@@ -330,7 +339,7 @@ const DeliveryOrders = ({ orders, userId, onRefresh, quickFilter }: Props) => {
               <TableRow key={o.id} id={`order-${o.id}`}>
                 <TableCell className="font-mono text-xs">{o.id.slice(0, 8)}…</TableCell>
                 <TableCell>₹{o.total}</TableCell>
-                <TableCell className="text-sm min-w-[200px] max-w-[260px]"><p className="break-words">{o.shipping_address ?? "—"}</p>{renderContact(o.id)}</TableCell>
+                <TableCell className="text-sm min-w-[200px] max-w-[260px]"><p className="break-words">{o.shipping_address ?? "—"}</p>{renderContact(o)}</TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1">
                     <Badge variant={statusColor(o.status) as any}>{o.status.replace(/_/g, " ")}</Badge>
@@ -438,7 +447,7 @@ const DeliveryOrders = ({ orders, userId, onRefresh, quickFilter }: Props) => {
                       <Badge variant="secondary">₹{o.total}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">{o.shipping_address || "No address"}</p>
-                    {renderContact(o.id)}
+                    {renderContact(o)}
                     <Steps flow={RETURN_FLOW} current={o.status} labels={STEP_LABELS} />
                     <ItemsList order={o} />
                     <div className="flex gap-2 pt-1">
@@ -490,7 +499,7 @@ const DeliveryOrders = ({ orders, userId, onRefresh, quickFilter }: Props) => {
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground">{o.shipping_address || "No address"}</p>
-                    {renderContact(o.id)}
+                    {renderContact(o)}
                     <p className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleString()}</p>
                     {inReturnFlow ? (
                       <Steps flow={RETURN_FLOW} current={o.status} labels={TRACK_LABELS} />

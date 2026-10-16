@@ -35,6 +35,7 @@ interface Order {
   shipping_address: string | null;
   delivery_charge?: number | null;
   user_id?: string | null;
+  delivery_contact_attempted_at?: string | null;
 }
 
 const statusSteps = ["pending", "accepted", "confirmed", "packed", "shipped", "delivered"];
@@ -63,8 +64,9 @@ const statusLabels: Record<string, string> = {
 
 const Profile = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "profile";
+  const orderParam = searchParams.get("order");
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,6 +96,17 @@ const Profile = () => {
     }
     if (user) fetchOrders();
   }, [user, authLoading]);
+
+  useEffect(() => {
+    if (!orderParam || !orders.length) return;
+    const order = orders.find((item) => item.id === orderParam);
+    if (!order) return;
+    setActiveSection("orders");
+    setSelectedOrder(order);
+    const next = new URLSearchParams(searchParams);
+    next.delete("order");
+    setSearchParams(next, { replace: true });
+  }, [orderParam, orders, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (profile) {
@@ -299,6 +312,13 @@ const Profile = () => {
               {statusLabels[order.status] || order.status}
             </Badge>
           </div>
+
+          {showTracking && order.delivery_contact_attempted_at && (
+            <div role="status" className="mx-4 mt-4 flex items-start gap-2 border-l-4 border-primary bg-primary/5 p-3 text-sm">
+              <Bell className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <p>We’re trying to contact you about your delivery. Please answer the call or contact your delivery staff.</p>
+            </div>
+          )}
 
           <div className="p-4 space-y-3">
             {items.slice(0, 2).map((item: any, idx: number) => (
