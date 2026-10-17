@@ -32,7 +32,7 @@ BEGIN
     RAISE EXCEPTION 'This user already belongs to a community (ഈ ഉപയോക്താവ് ഇതിനകം ഒരു കമ്മ്യൂണിറ്റിയിൽ അംഗമാണ്)';
   END IF;
   IF EXISTS (SELECT 1 FROM public.community_invites WHERE community_id = _cid AND invited_mobile = _norm AND status = 'pending') THEN
-    RAISE EXCEPTION 'An invite is already pending for this number';
+    RAISE EXCEPTION 'An invite is already pending for this number (ഈ നമ്പറിലേക്ക് ഇതിനകം ഒരു ക്ഷണം ലഭിച്ചിട്ടുണ്ട്.)';
   END IF;
 
   INSERT INTO public.community_invites (community_id, invited_mobile, invited_user_id, created_by)
