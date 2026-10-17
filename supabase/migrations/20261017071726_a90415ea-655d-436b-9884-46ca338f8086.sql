@@ -1,0 +1,2 @@
+REVOKE ALL ON FUNCTION public.prevent_client_delivery_contact_attempt_change() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.prevent_client_delivery_contact_attempt_change() TO service_role;
