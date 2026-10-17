@@ -66,7 +66,8 @@ serve(async (req) => {
     if (!agentRes.ok) return json(502, { error: "e-Life lookup failed", details: await agentRes.text() });
     const agents = await agentRes.json();
     const agent = agents?.[0];
-    if (!agent) return json(404, { error: "not_an_agent", message: "Mobile not registered as a Pennyekart agent" });
+    // 200 so non-agent customers don't surface as runtime errors; client hides the section.
+    if (!agent) return json(200, { error: "not_an_agent", notAgent: true, message: "Mobile not registered as a Pennyekart agent" });
 
     const url = new URL(req.url);
 

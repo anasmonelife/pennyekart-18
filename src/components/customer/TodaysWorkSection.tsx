@@ -80,7 +80,7 @@ export const TodaysWorkSection = () => {
     (async () => {
       setChecking(true);
       const r = await callFn({ method: "GET", query: { date: ymd(new Date()) } });
-      if (r.status === 404 && r.body?.error === "not_an_agent") {
+      if (r.body?.error === "not_an_agent" || !r.body?.agent) {
         setNotAgent(true);
       } else if (r.ok) {
         setAgent(r.body.agent);
