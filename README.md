@@ -129,3 +129,4 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/c
 15-10-26 10/10/26 organ
 15-10-26 team elife
 15/10/26 laundry
+17/10/26 anasmon
