@@ -16,6 +16,7 @@ interface PendingOrder {
   shipping_address: string | null;
   created_at: string;
   items: any;
+  delivery_contact_attempted_at?: string | null;
 }
 
 interface Props {
@@ -124,7 +125,7 @@ const NewOrderNotification = ({ userId, role, onAccept, onRefresh }: Props) => {
       }
       const { data, error } = await supabase
         .from("orders")
-        .select("id, status, total, shipping_address, created_at, items")
+        .select("id, status, total, shipping_address, created_at, items, delivery_contact_attempted_at")
         .eq("assigned_delivery_staff_id", userId)
         .in("status", [...PENDING_STATUSES.delivery, ...IN_PROGRESS_STATUSES.delivery])
         .order("created_at", { ascending: false });
@@ -265,6 +266,7 @@ const NewOrderNotification = ({ userId, role, onAccept, onRefresh }: Props) => {
         open={open} onOpenChange={setOpen} userId={userId} pending={pendingOrders} active={inProgressOrders}
         dismissedIds={dismissedIds} busyId={busyId} onAccept={handleAccept} onFinish={handleFinish}
         onLater={handleDismiss} onDetail={setDetailOrder} onNotToday={handleNotToday}
+        onAttemptSent={() => { fetchPending(); onRefresh?.(); }}
       /> : <>
         <OrderNotificationDialog
           highlightItems

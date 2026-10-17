@@ -9,6 +9,7 @@ interface Props {
   pending: NotificationOrder[]; active: NotificationOrder[]; dismissedIds: Set<string>; busyId: string | null;
   onAccept: (id: string) => void; onFinish: (id: string) => void;
   onLater: (id: string) => void; onDetail: (order: NotificationOrder) => void; onNotToday: () => void;
+  onAttemptSent: () => void;
 }
 
 export default function DeliveryOrderNotificationDialog(props: Props) {
@@ -17,7 +18,8 @@ export default function DeliveryOrderNotificationDialog(props: Props) {
     open={props.open} onOpenChange={props.onOpenChange} title="Delivery orders"
     pending={props.pending} active={props.active} dismissedIds={props.dismissedIds}
     renderContact={(order) => <>
-      <DeliveryOrderContact contact={contacts.data?.[order.id]} loading={contacts.isLoading || contacts.isFetching} error={contacts.isError} />
+      <DeliveryOrderContact contact={contacts.data?.[order.id]} loading={contacts.isLoading || contacts.isFetching} error={contacts.isError}
+        orderId={order.id} orderStatus={order.status} attemptedAt={order.delivery_contact_attempted_at ?? null} onAttemptSent={props.onAttemptSent} />
       {contacts.isError && <Button variant="outline" size="sm" onClick={() => contacts.refetch()}>Retry contact</Button>}
     </>}
     renderActions={(order, isNew) => <div className="grid grid-cols-[1fr_auto] gap-2">
