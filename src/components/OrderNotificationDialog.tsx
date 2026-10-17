@@ -7,7 +7,7 @@ import { HighlightedOrderItems } from "@/components/selling-partner/OrderItemHig
 
 export interface NotificationOrder {
   id: string; status: string; total: number; shipping_address: string | null;
-  created_at: string; items: unknown;
+  created_at: string; items: unknown; delivery_contact_attempted_at?: string | null;
 }
 
 interface Props {
