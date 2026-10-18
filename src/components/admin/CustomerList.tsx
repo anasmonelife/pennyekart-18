@@ -619,8 +619,58 @@ const CustomerList = ({ customers, orderSummaries, walletSummaries, onRefresh }:
         <Badge variant="outline" className="ml-auto">{filtered.length} customers</Badge>
       </div>
 
+      {/* Mobile: tap-to-expand cards */}
+      <div className="space-y-2 md:hidden">
+        {paginatedCustomers.map((c) => {
+          const o = orderSummaries?.get(c.user_id);
+          const w = walletSummaries?.get(c.user_id);
+          const sh = searchHistories.get(c.user_id);
+          return (
+            <details key={c.id} className={`group rounded-lg border bg-card ${c.is_blocked ? "border-destructive/40" : ""}`}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 truncate text-sm font-medium">
+                    {c.is_blocked && <Ban className="h-3.5 w-3.5 shrink-0 text-destructive" />}
+                    <span className="truncate">{c.full_name ?? "—"}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">{c.mobile_number ?? "—"}</div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {getStatusBadge(c)}
+                  <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90" />
+                </div>
+              </summary>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2 border-t p-3 text-xs">
+                {c.customer_id && <div className="col-span-2 font-mono text-primary">{c.customer_id}</div>}
+                <div><span className="text-muted-foreground">Joined</span><div>{c.created_at ? format(new Date(c.created_at), "dd MMM yyyy") : "—"}</div></div>
+                <div><span className="text-muted-foreground">Last login</span><div>{c.last_login_at ? getRelativeTime(c.last_login_at) : "Never"}</div></div>
+                <div><span className="text-muted-foreground">Orders</span><div>{o?.order_count ?? 0}</div></div>
+                <div><span className="text-muted-foreground">Total spent</span><div>{o && o.total_spent > 0 ? `₹${o.total_spent.toFixed(0)}` : "—"}</div></div>
+                <div><span className="text-muted-foreground">Wallet</span><div>₹{(w?.balance ?? 0).toFixed(0)}</div></div>
+                <div><span className="text-muted-foreground">Last order</span><div>{o?.last_order_date ? getRelativeTime(o.last_order_date) : "—"}</div></div>
+                <div><span className="text-muted-foreground">Panchayath</span><div>{c.local_body_name ?? "—"}</div></div>
+                <div><span className="text-muted-foreground">Ward</span><div>{c.ward_number ?? "—"}</div></div>
+                {c.referred_by && <div className="col-span-2 text-muted-foreground">Referred{c.referrer_name ? ` by ${c.referrer_name}` : ""}</div>}
+                <div className="col-span-2 flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={!c.is_blocked} onCheckedChange={() => toggleBlock(c.user_id, c.is_blocked ?? false)} />
+                    <span>{c.is_blocked ? "Blocked" : "Active"}</span>
+                  </div>
+                  {sh && (
+                    <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => openSearchDetail(c.user_id, c.full_name ?? "Unknown")}>
+                      <Eye className="h-3 w-3" /> Searches ({sh.search_count})
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </details>
+          );
+        })}
+        {filtered.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No customers found</p>}
+      </div>
+
       {/* Table */}
-      <div className="admin-table-wrap">
+      <div className="admin-table-wrap hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
