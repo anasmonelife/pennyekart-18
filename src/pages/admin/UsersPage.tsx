@@ -75,6 +75,7 @@ const UsersPage = () => {
   const [filterDistrict, setFilterDistrict] = useState("all");
   const [filterLocalBody, setFilterLocalBody] = useState("all");
   const [filterWard, setFilterWard] = useState("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterSellerType, setFilterSellerType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [localBodies, setLocalBodies] = useState<LocalBody[]>([]);
