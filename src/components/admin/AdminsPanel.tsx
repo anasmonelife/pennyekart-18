@@ -61,7 +61,45 @@ const AdminsPanel = ({ users, roles, canEdit, onChanged }: Props) => {
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input placeholder="Search admins by name, email or mobile..." value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
       </div>
-      <div className="rounded-lg border bg-card overflow-x-auto">
+      <div className="space-y-2 md:hidden">
+        {admins.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">No admins found</p>}
+        {admins.map((u) => {
+          const isSelf = u.user_id === user?.id;
+          const locked = !canEdit || u.is_super_admin || isSelf || busy === u.id;
+          return (
+            <details key={u.id} className="group rounded-lg border bg-card">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">{u.full_name || "—"}{isSelf && " (You)"}</div>
+                  <div className="truncate text-xs text-muted-foreground">{u.email}</div>
+                </div>
+                <Badge variant={u.is_blocked ? "destructive" : "secondary"}>{u.is_blocked ? "Blocked" : "Active"}</Badge>
+              </summary>
+              <div className="space-y-2 border-t p-3 text-xs">
+                <div className="text-muted-foreground">{u.mobile_number || "—"} · Last login {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "Never"}</div>
+                <select
+                  className="h-9 w-full rounded-md border bg-background px-2 text-sm capitalize"
+                  value={u.role_id ?? ""}
+                  disabled={locked}
+                  onChange={(e) => {
+                    const v = e.target.value || null;
+                    if (!v && !window.confirm("Remove admin access for this user?")) return;
+                    update(u, { role_id: v }, v ? "Role updated" : "Admin access removed");
+                  }}
+                >
+                  {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  <option value="">— Remove admin access —</option>
+                </select>
+                <div className="flex items-center gap-2">
+                  <Switch checked={!u.is_blocked} disabled={locked} onCheckedChange={(on) => update(u, { is_blocked: !on }, on ? "Admin unblocked" : "Admin blocked")} />
+                  <span>Active</span>
+                </div>
+              </div>
+            </details>
+          );
+        })}
+      </div>
+      <div className="hidden md:block rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

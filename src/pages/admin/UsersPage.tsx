@@ -13,7 +13,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import CustomerList from "@/components/admin/CustomerList";
 import AddAdminDialog from "@/components/admin/AddAdminDialog";
 import AdminsPanel, { isAddedAdmin } from "@/components/admin/AdminsPanel";
-import { Search, ChevronLeft, ChevronRight, MoreHorizontal, Pencil, Trash2, KeyRound, Download } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ChevronDown, SlidersHorizontal, MoreHorizontal, Pencil, Trash2, KeyRound, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -75,6 +75,7 @@ const UsersPage = () => {
   const [filterDistrict, setFilterDistrict] = useState("all");
   const [filterLocalBody, setFilterLocalBody] = useState("all");
   const [filterWard, setFilterWard] = useState("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterSellerType, setFilterSellerType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [localBodies, setLocalBodies] = useState<LocalBody[]>([]);
@@ -399,34 +400,34 @@ const UsersPage = () => {
   return (
     <AdminLayout>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Users Management</h1>
+        <h1 className="text-xl font-bold md:text-2xl">Users Management</h1>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={exportCsv}>
-            <Download className="mr-1.5 h-4 w-4" /> Export CSV
+            <Download className="mr-1.5 h-4 w-4" /> <span className="hidden sm:inline">Export </span>CSV
           </Button>
           {isSuperAdmin && <AddAdminDialog roles={roles} onCreated={fetchData} />}
         </div>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="-mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-hide md:mx-0 md:grid md:grid-cols-3 md:gap-3 md:overflow-visible md:px-0 lg:grid-cols-6">
         {Object.entries(USER_TYPE_LABELS).map(([key, label]) => (
           <button
             key={key}
             onClick={() => { setFilterType(key); setCurrentPage(1); }}
-            className={`rounded-lg border p-4 text-left transition-colors hover:bg-accent ${filterType === key ? "border-primary bg-primary/5" : "bg-card"}`}
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-left transition-colors hover:bg-accent md:rounded-lg md:p-4 ${filterType === key ? "border-primary bg-primary/5" : "bg-card"}`}
           >
-            <span className="block text-xs text-muted-foreground">{label}</span>
-            <span className="text-2xl font-bold">
+            <span className="text-xs text-muted-foreground md:block">{label}</span>
+            <span className="ml-1.5 text-sm font-bold md:ml-0 md:text-2xl">
               {key === "all" ? users.length : users.filter(u => u.user_type === key).length}
             </span>
           </button>
         ))}
         <button
           onClick={() => { setFilterType("admins"); setCurrentPage(1); }}
-          className={`rounded-lg border p-4 text-left transition-colors hover:bg-accent ${filterType === "admins" ? "border-primary bg-primary/5" : "bg-card"}`}
+          className={`shrink-0 rounded-full border px-3 py-1.5 text-left transition-colors hover:bg-accent md:rounded-lg md:p-4 ${filterType === "admins" ? "border-primary bg-primary/5" : "bg-card"}`}
         >
-          <span className="block text-xs text-muted-foreground">Admins</span>
-          <span className="text-2xl font-bold">{users.filter(isAddedAdmin).length}</span>
+          <span className="text-xs text-muted-foreground md:block">Admins</span>
+          <span className="ml-1.5 text-sm font-bold md:ml-0 md:text-2xl">{users.filter(isAddedAdmin).length}</span>
         </button>
       </div>
 
@@ -458,7 +459,19 @@ const UsersPage = () => {
         </Select>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4 items-center">
+      <Button
+        variant="outline"
+        size="sm"
+        className="mb-3 w-full justify-between md:hidden"
+        onClick={() => setFiltersOpen((o) => !o)}
+      >
+        <span className="flex items-center gap-2">
+          <SlidersHorizontal className="h-4 w-4" /> Filters
+          {activeFilterCount > 0 && <Badge className="h-5 px-1.5">{activeFilterCount}</Badge>}
+        </span>
+        <ChevronDown className={`h-4 w-4 transition-transform ${filtersOpen ? "rotate-180" : ""}`} />
+      </Button>
+      <div className={`${filtersOpen ? "grid grid-cols-2" : "hidden"} md:flex flex-wrap gap-2 mb-4 items-center`}>
         <Select value={filterApproval} onValueChange={setFilterApproval}>
           <SelectTrigger className="w-full sm:w-40 h-9"><SelectValue placeholder="Approval" /></SelectTrigger>
           <SelectContent>
@@ -530,7 +543,77 @@ const UsersPage = () => {
           {filteredUsers.length === 0 ? (
             <p className="py-12 text-center text-muted-foreground">No users found</p>
           ) : (
-            <div className="admin-table-wrap">
+            <>
+            <div className="space-y-2 md:hidden">
+              {paginatedUsers.map((u) => (
+                <details key={u.id} className="group rounded-lg border bg-card">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">{u.full_name ?? "—"}</div>
+                      <div className="truncate text-xs text-muted-foreground">{u.mobile_number ?? u.email ?? "—"}</div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Badge variant={getTypeBadgeVariant(u.user_type)}>{USER_TYPE_LABELS[u.user_type] ?? u.user_type}</Badge>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90" />
+                    </div>
+                  </summary>
+                  <div className="space-y-3 border-t p-3 text-sm">
+                    {u.customer_id && <div className="font-mono text-xs text-muted-foreground">{u.customer_id}</div>}
+                    <div className="break-all text-xs">{u.email ?? "—"}</div>
+                    {u.user_type === "selling_partner" && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-muted-foreground">Seller type</span>
+                        <Select value={u.seller_type ?? "normal"} onValueChange={(v) => updateSellerType(u.user_id, v)}>
+                          <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="normal">Normal</SelectItem>
+                            <SelectItem value="utility">Utility</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Approved</span>
+                      <Switch checked={u.is_approved} onCheckedChange={() => toggleApproval(u.user_id, u.is_approved)} />
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Role</span>
+                      {isSuperAdmin ? (
+                        <Select value={u.role_id ?? "none"} onValueChange={(v) => updateRole(u.user_id, v)}>
+                          <SelectTrigger className="h-8 w-36 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No role</SelectItem>
+                            {roles.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge variant="secondary">{roles.find((r) => r.id === u.role_id)?.name ?? "No role"}</Badge>
+                      )}
+                    </div>
+                    {isSuperAdmin && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-muted-foreground">Super admin</span>
+                        <Switch checked={u.is_super_admin} onCheckedChange={() => toggleSuperAdmin(u.user_id, u.is_super_admin)} />
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Button variant="outline" size="sm" onClick={() => openEditDialog(u)}><Pencil className="mr-1 h-3.5 w-3.5" /> Edit</Button>
+                      {u.user_type !== "customer" && (
+                        <Button variant="outline" size="sm" onClick={() => { setResetUser(u); setResetForm({ new_password: "", confirm_password: "" }); }}>
+                          <KeyRound className="mr-1 h-3.5 w-3.5" /> Password
+                        </Button>
+                      )}
+                      {isSuperAdmin && (
+                        <Button variant="outline" size="sm" className="text-destructive" onClick={() => setDeleteUser(u)}>
+                          <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </details>
+              ))}
+            </div>
+            <div className="admin-table-wrap hidden md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -623,12 +706,22 @@ const UsersPage = () => {
                 </TableBody>
               </Table>
             </div>
+            </>
           )}
 
           {/* Pagination */}
           {filteredUsers.length > 0 && (
              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
-              <div className="flex items-center gap-1">
+              <div className="flex w-full items-center justify-between gap-2 sm:hidden">
+                <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
+                <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="hidden sm:flex items-center gap-1">
                 <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
