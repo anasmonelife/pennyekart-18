@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import CustomerList from "@/components/admin/CustomerList";
 import AddAdminDialog from "@/components/admin/AddAdminDialog";
+import ElifeRoleSyncButton from "@/components/admin/ElifeRoleSyncButton";
 import AdminsPanel, { isAddedAdmin } from "@/components/admin/AdminsPanel";
 import { Search, ChevronLeft, ChevronRight, ChevronDown, SlidersHorizontal, MoreHorizontal, Pencil, Trash2, KeyRound, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -405,6 +406,7 @@ const UsersPage = () => {
           <Button variant="outline" size="sm" onClick={exportCsv}>
             <Download className="mr-1.5 h-4 w-4" /> <span className="hidden sm:inline">Export </span>CSV
           </Button>
+          {isSuperAdmin && <ElifeRoleSyncButton onDone={fetchData} />}
           {isSuperAdmin && <AddAdminDialog roles={roles} onCreated={fetchData} />}
         </div>
       </div>
