@@ -6,7 +6,11 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Pencil, Search, ShieldCheck, Trash2 } from "lucide-react";
 
 interface AdminRow {
   id: string;
@@ -37,6 +41,47 @@ const AdminsPanel = ({ users, roles, canEdit, onChanged }: Props) => {
   const { user } = useAuth();
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [editing, setEditing] = useState<AdminRow | null>(null);
+  const [form, setForm] = useState({ full_name: "", email: "", mobile_number: "", role_id: "" });
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<AdminRow | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const callManage = async (body: Record<string, unknown>) => {
+    const { data, error } = await supabase.functions.invoke("manage-admin", { body });
+    let msg = (data as any)?.error || error?.message;
+    if (error) {
+      try { msg = (await (error as any)?.context?.json())?.error ?? msg; } catch { /* ignore */ }
+    }
+    return msg as string | undefined;
+  };
+
+  const openEdit = (u: AdminRow) => {
+    setForm({ full_name: u.full_name ?? "", email: u.email ?? "", mobile_number: u.mobile_number ?? "", role_id: u.role_id ?? "" });
+    setEditing(u);
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    setSaving(true);
+    const err = await callManage({ action: "update", user_id: editing.user_id, ...form });
+    setSaving(false);
+    if (err) return toast({ title: "Could not save", description: err, variant: "destructive" });
+    toast({ title: "Admin updated" });
+    setEditing(null);
+    onChanged();
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    const err = await callManage({ action: "delete", user_id: deleting.user_id });
+    setDeleteBusy(false);
+    if (err) return toast({ title: "Could not delete", description: err, variant: "destructive" });
+    toast({ title: "Admin deleted" });
+    setDeleting(null);
+    onChanged();
+  };
 
   const admins = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -94,6 +139,12 @@ const AdminsPanel = ({ users, roles, canEdit, onChanged }: Props) => {
                   <Switch checked={!u.is_blocked} disabled={locked} onCheckedChange={(on) => update(u, { is_blocked: !on }, on ? "Admin unblocked" : "Admin blocked")} />
                   <span>Active</span>
                 </div>
+                {!locked && (
+                  <div className="flex gap-2 pt-1">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => openEdit(u)}><Pencil className="mr-1 h-3.5 w-3.5" /> Edit</Button>
+                    <Button variant="outline" size="sm" className="flex-1 text-destructive" onClick={() => setDeleting(u)}><Trash2 className="mr-1 h-3.5 w-3.5" /> Delete</Button>
+                  </div>
+                )}
               </div>
             </details>
           );
@@ -108,11 +159,12 @@ const AdminsPanel = ({ users, roles, canEdit, onChanged }: Props) => {
               <TableHead>Role</TableHead>
               <TableHead>Last login</TableHead>
               <TableHead>Active</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {admins.length === 0 && (
-              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No admins found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No admins found</TableCell></TableRow>
             )}
             {admins.map((u) => {
               const isSelf = u.user_id === user?.id;
@@ -157,13 +209,63 @@ const AdminsPanel = ({ users, roles, canEdit, onChanged }: Props) => {
                       onCheckedChange={(on) => update(u, { is_blocked: !on }, on ? "Admin unblocked" : "Admin blocked")}
                     />
                   </TableCell>
+                  <TableCell className="text-right">
+                    {!locked && (
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(u)} aria-label={`Edit ${u.full_name ?? "admin"}`}><Pencil className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDeleting(u)} aria-label={`Delete ${u.full_name ?? "admin"}`}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    )}
+                  </TableCell>
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
       </div>
-      {!canEdit && <p className="text-xs text-muted-foreground">Only super admins can change admin roles or block admins.</p>}
+      {!canEdit && <p className="text-xs text-muted-foreground">Only super admins can edit, block or delete admins.</p>}
+
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit admin</DialogTitle>
+            <DialogDescription>Changing the email also changes the address they sign in with.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Full name</Label><Input maxLength={100} value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
+            <div><Label>Email</Label><Input type="email" maxLength={255} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+            <div><Label>Mobile</Label><Input maxLength={16} value={form.mobile_number} onChange={(e) => setForm({ ...form, mobile_number: e.target.value })} /></div>
+            <div>
+              <Label>Role</Label>
+              <select className="h-10 w-full rounded-md border bg-background px-2 text-sm capitalize" value={form.role_id} onChange={(e) => setForm({ ...form, role_id: e.target.value })}>
+                <option value="" disabled>Select a role</option>
+                {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
+            <Button onClick={saveEdit} disabled={saving}>{saving ? "Saving..." : "Save changes"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete admin</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete <strong>{deleting?.full_name || deleting?.email}</strong>? Their admin login will be removed and they will no longer be able to sign in. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); confirmDelete(); }} disabled={deleteBusy} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteBusy ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
