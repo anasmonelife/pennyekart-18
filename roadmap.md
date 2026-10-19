@@ -1,5 +1,9 @@
 # Roadmap
 
+## Communities commission allocation tab
+- [x] Add a Commission allocation tab on /admin/communities listing e-Life roles (Super Admin to Coordinator) with their allocated panchayaths, role commission rate, search, role filter and CSV export. 3 role-range tests passed; build OK; server check rejects signed-out access.
+- [ ] Confirm live e-Life data in a super admin session (blocked: external Supabase gives no test sign-in).
+
 ## Community role-based commission settings
 - [ ] Add saved role-specific commission minimum, maximum, and active rate settings on `/admin/communities`.
 - [ ] Apply each community creator's assigned role rate in totals, details, and exports; add focused tests.
