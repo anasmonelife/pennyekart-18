@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, RefreshCw, MapPin, Download } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Loader2, RefreshCw, MapPin, Download, ChevronRight, ChevronDown, ShieldCheck } from "lucide-react";
 import { commissionRateForRole, type CommissionRule } from "@/lib/communityCommission";
 import { groupAllocationsByRole, normalizeRoleName, roleLabel, type AllocationPerson } from "@/lib/elifeAllocation";
 
@@ -23,6 +23,8 @@ export default function CommissionAllocationTab({ roles, rules, fallbackRate }: 
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [openRole, setOpenRole] = useState<string | null>(null);
+  const [openPerson, setOpenPerson] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -63,6 +65,7 @@ export default function CommissionAllocationTab({ roles, rules, fallbackRate }: 
 
   const allGroups = useMemo(() => groupAllocationsByRole(people), [people]);
   const visible = roleFilter === "all" ? groups : groups.filter((g) => g.role === roleFilter);
+  const openGroup = visible.find((g) => g.role === openRole) ?? null;
 
   const exportCsv = () => {
     const header = ["Role", "Name", "Mobile", "Panchayaths", "Districts", "Commission %"];
@@ -137,55 +140,101 @@ export default function CommissionAllocationTab({ roles, rules, fallbackRate }: 
         </CardContent></Card>
       ) : visible.length === 0 ? (
         <p className="py-10 text-center text-sm text-muted-foreground">No e-Life people found for these filters.</p>
-      ) : visible.map((g) => {
-        const rate = commissionRateForRole(pennyRoleId(g.role), rules, fallbackRate);
-        return (
-          <Card key={g.role}>
-            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-3">
-              <CardTitle className="text-base">{roleLabel(g.role)} ({g.people.length})</CardTitle>
-              <Badge variant="outline">Commission {rate}% of profit</Badge>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Allocated panchayaths</TableHead>
-                      <TableHead className="text-right">Count</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {g.people.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell className="min-w-40 align-top">
-                          <p className="text-sm font-medium">{p.name || "—"}</p>
-                          <p className="text-xs text-muted-foreground">{p.mobile || "—"}</p>
-                          {!p.is_active && <Badge variant="outline" className="mt-1 text-[10px]">Inactive</Badge>}
-                        </TableCell>
-                        <TableCell className="align-top">
-                          {p.panchayaths.length ? (
-                            <div className="flex flex-wrap gap-1">
-                              {p.panchayaths.map((x) => (
-                                <Badge key={x.id} variant="secondary" className="gap-1 font-normal">
-                                  <MapPin className="h-3 w-3" />
-                                  {x.name}{x.district ? ` · ${x.district}` : ""}
-                                </Badge>
-                              ))}
-                              {p.ward != null && p.ward !== "" && <Badge variant="outline" className="font-normal">Ward {String(p.ward)}</Badge>}
-                            </div>
-                          ) : <span className="text-xs text-muted-foreground">Not allocated</span>}
-                        </TableCell>
-                        <TableCell className="text-right align-top">{p.panchayaths.length}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {visible.map((g) => {
+            const rate = commissionRateForRole(pennyRoleId(g.role), rules, fallbackRate);
+            const allocated = new Set(g.people.flatMap((p) => p.panchayaths.map((x) => x.id))).size;
+            return (
+              <button
+                key={g.role}
+                type="button"
+                onClick={() => setOpenRole(g.role)}
+                className="group rounded-lg border bg-card p-4 text-left shadow-sm transition-colors hover:border-primary hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <ShieldCheck className="h-4 w-4" />
+                    </span>
+                    <h3 className="font-semibold">{roleLabel(g.role)}</h3>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-md bg-muted/50 p-2">
+                    <p className="text-lg font-bold">{g.people.length}</p>
+                    <p className="text-[11px] text-muted-foreground">People</p>
+                  </div>
+                  <div className="rounded-md bg-muted/50 p-2">
+                    <p className="text-lg font-bold">{allocated}</p>
+                    <p className="text-[11px] text-muted-foreground">Panchayaths</p>
+                  </div>
+                  <div className="rounded-md bg-muted/50 p-2">
+                    <p className="text-lg font-bold">{rate}%</p>
+                    <p className="text-[11px] text-muted-foreground">Commission</p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <Dialog open={!!openGroup} onOpenChange={(o) => !o && setOpenRole(null)}>
+        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{openGroup ? `${roleLabel(openGroup.role)} (${openGroup.people.length})` : ""}</DialogTitle>
+            {openGroup && (
+              <DialogDescription>
+                Commission {commissionRateForRole(pennyRoleId(openGroup.role), rules, fallbackRate)}% of profit · tap a person to see their panchayaths
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          <div className="space-y-2">
+            {openGroup?.people.map((p) => {
+              const expanded = openPerson === p.id;
+              return (
+                <div key={p.id} className="rounded-lg border bg-card">
+                  <button
+                    type="button"
+                    onClick={() => setOpenPerson(expanded ? null : p.id)}
+                    aria-expanded={expanded}
+                    className="flex w-full items-center justify-between gap-3 p-3 text-left"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{p.name || "—"}</p>
+                      <p className="text-xs text-muted-foreground">{p.mobile || "—"}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {!p.is_active && <Badge variant="outline" className="text-[10px]">Inactive</Badge>}
+                      <Badge variant="secondary" className="gap-1 font-normal">
+                        <MapPin className="h-3 w-3" /> {p.panchayaths.length}
+                      </Badge>
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
+                    </div>
+                  </button>
+                  {expanded && (
+                    <div className="border-t p-3">
+                      {p.panchayaths.length ? (
+                        <div className="flex flex-wrap gap-1">
+                          {p.panchayaths.map((x) => (
+                            <Badge key={x.id} variant="secondary" className="gap-1 font-normal">
+                              <MapPin className="h-3 w-3" />
+                              {x.name}{x.district ? ` · ${x.district}` : ""}
+                            </Badge>
+                          ))}
+                          {p.ward != null && p.ward !== "" && <Badge variant="outline" className="font-normal">Ward {String(p.ward)}</Badge>}
+                        </div>
+                      ) : <p className="text-xs text-muted-foreground">Not allocated</p>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
