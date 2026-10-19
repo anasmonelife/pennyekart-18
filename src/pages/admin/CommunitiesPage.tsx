@@ -15,11 +15,13 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Users, IndianRupee, TrendingUp, Percent, Download, Loader2, Crown, Save } from "lucide-react";
+import { Users, IndianRupee, TrendingUp, Percent, Download, Loader2, Crown, Save, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { commissionForProfit, isValidCommissionRule, type CommissionRule } from "@/lib/communityCommission";
 
 const COMMISSION_KEY = "community_creator_commission_percent";
+const COMMISSION_RULES_KEY = "community_creator_commission_rules";
 
 interface SummaryRow {
   community_id: string;
@@ -27,6 +29,7 @@ interface SummaryRow {
   creator_user_id: string;
   creator_name: string | null;
   creator_mobile: string | null;
+  creator_role_id: string | null;
   member_count: number;
   order_count: number;
   revenue: number;
@@ -46,6 +49,11 @@ interface MemberRow {
   cost: number;
   profit: number;
   unmatched_items: number;
+}
+
+interface RoleRow {
+  id: string;
+  name: string;
 }
 
 type Period = "this_month" | "last_month" | "all" | "custom";
@@ -83,6 +91,13 @@ const CommunitiesPage = () => {
   const [customTo, setCustomTo] = useState(toISODate(new Date()));
   const [commission, setCommission] = useState("10");
   const [savingCommission, setSavingCommission] = useState(false);
+  const [roles, setRoles] = useState<RoleRow[]>([]);
+  const [rules, setRules] = useState<Record<string, CommissionRule>>({});
+  const [selectedRole, setSelectedRole] = useState("");
+  const [minimum, setMinimum] = useState("0");
+  const [maximum, setMaximum] = useState("100");
+  const [rate, setRate] = useState("10");
+  const [savingRule, setSavingRule] = useState(false);
 
   const [detail, setDetail] = useState<SummaryRow | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
@@ -90,13 +105,25 @@ const CommunitiesPage = () => {
 
   const range = useMemo(() => resolveRange(period, customFrom, customTo), [period, customFrom, customTo]);
   const pct = Number(commission) || 0;
+  const communityCommission = (row: SummaryRow) => commissionForProfit(row.profit, row.creator_role_id, rules, pct);
+  const communityRate = (row: SummaryRow) => {
+    const roleRule = row.creator_role_id ? rules[row.creator_role_id] : undefined;
+    return roleRule && isValidCommissionRule(roleRule) ? roleRule.rate : pct;
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await rpc("get_community_revenue_summary", { _from: range.from, _to: range.to });
     if (error) toast.error(error.message.replace(/^.*?:\s*/, ""));
-    setRows(((data as SummaryRow[] | null) ?? []).map((r) => ({
+    const summaries = (data as SummaryRow[] | null) ?? [];
+    const creatorIds = [...new Set(summaries.map((r) => r.creator_user_id).filter(Boolean))];
+    const { data: creatorProfiles } = creatorIds.length
+      ? await supabase.from("profiles").select("user_id, role_id").in("user_id", creatorIds)
+      : { data: [] };
+    const roleByCreator = new Map((creatorProfiles ?? []).map((profile) => [profile.user_id, profile.role_id]));
+    setRows(summaries.map((r) => ({
       ...r,
+      creator_role_id: roleByCreator.get(r.creator_user_id) ?? null,
       revenue: Number(r.revenue),
       cost: Number(r.cost),
       profit: Number(r.profit),
@@ -111,14 +138,35 @@ const CommunitiesPage = () => {
   useEffect(() => {
     supabase
       .from("app_settings")
-      .select("value")
-      .eq("key", COMMISSION_KEY)
-      .maybeSingle()
+      .select("key, value")
+      .in("key", [COMMISSION_KEY, COMMISSION_RULES_KEY])
       .then(({ data }) => {
-        const v = (data as { value?: string } | null)?.value;
-        if (v) setCommission(v);
+        const settings = (data ?? []) as { key: string; value: string | null }[];
+        const savedFallback = settings.find((setting) => setting.key === COMMISSION_KEY)?.value;
+        if (savedFallback) setCommission(savedFallback);
+        const storedRules = settings.find((setting) => setting.key === COMMISSION_RULES_KEY)?.value;
+        if (storedRules) {
+          try {
+            const parsed = JSON.parse(storedRules) as Record<string, CommissionRule>;
+            setRules(Object.fromEntries(Object.entries(parsed).filter(([, rule]) => isValidCommissionRule(rule))));
+          } catch {
+            setRules({});
+          }
+        }
       });
+    supabase.from("roles").select("id, name").order("name").then(({ data }) => {
+      const availableRoles = (data ?? []) as RoleRow[];
+      setRoles(availableRoles);
+      setSelectedRole((current) => current || availableRoles[0]?.id || "");
+    });
   }, []);
+
+  useEffect(() => {
+    const rule = rules[selectedRole];
+    setMinimum(rule ? String(rule.minimum) : "0");
+    setMaximum(rule ? String(rule.maximum) : "100");
+    setRate(rule ? String(rule.rate) : commission);
+  }, [selectedRole, rules, commission]);
 
   const saveCommission = async () => {
     const value = Number(commission);
@@ -139,6 +187,42 @@ const CommunitiesPage = () => {
       return;
     }
     toast.success("Commission percentage saved");
+  };
+
+  const saveRoleRule = async () => {
+    const rule = { minimum: Number(minimum), maximum: Number(maximum), rate: Number(rate) };
+    if (!selectedRole || !isValidCommissionRule(rule)) {
+      toast.error("Set a valid range from 0 to 100%, with the rate inside that range");
+      return;
+    }
+    const nextRules = { ...rules, [selectedRole]: rule };
+    setSavingRule(true);
+    const { error } = await supabase.from("app_settings").upsert(
+      { key: COMMISSION_RULES_KEY, value: JSON.stringify(nextRules), description: "Community creator commission rules by role" },
+      { onConflict: "key" },
+    );
+    setSavingRule(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setRules(nextRules);
+    toast.success("Role commission rule saved");
+  };
+
+  const removeRoleRule = async (roleId: string) => {
+    const nextRules = { ...rules };
+    delete nextRules[roleId];
+    const { error } = await supabase.from("app_settings").upsert(
+      { key: COMMISSION_RULES_KEY, value: JSON.stringify(nextRules), description: "Community creator commission rules by role" },
+      { onConflict: "key" },
+    );
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setRules(nextRules);
+    toast.success("Role commission rule removed");
   };
 
   const openDetail = async (row: SummaryRow) => {

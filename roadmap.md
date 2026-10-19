@@ -1,5 +1,9 @@
 # Roadmap
 
+## Community role-based commission settings
+- [ ] Add saved role-specific commission minimum, maximum, and active rate settings on `/admin/communities`.
+- [ ] Apply each community creator's assigned role rate in totals, details, and exports; add focused tests.
+
 ## Community role access and requests
 - [ ] Restrict My Community to Coordinator, Group Leader, and Pro; let other users request access.
 - [ ] Add admin review with eligible-role assignment and activation enforced on the server.

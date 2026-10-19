@@ -20,3 +20,4 @@
 - Keep utility booking history reads scoped to the signed-in customer through the existing request ownership policies, so other customers' contact details remain private.
 - Share per-user, per-role daily reminder dismissal across delivery, seller, and utility popup flows; keep it client-side and separate from booking/order actions.
 - Keep delivery contact-attempt notifications behind an authenticated Edge Function that verifies order assignment, claims the order once, and sends only to that order's customer; customer notice reads must remain scoped to their own order.- Sync e-Life roles into profiles only through the super-admin-checked elife-role-sync Edge Function, matching by normalized mobile and existing role names, so browsers never choose roles from external data.
+- Store community role commission rules in app settings and calculate each community's commission from its creator's assigned role to keep reports consistent without a separate rules table.
