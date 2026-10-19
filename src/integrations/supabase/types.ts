@@ -314,6 +314,45 @@ export type Database = {
         }
         Relationships: []
       }
+      community_access_requests: {
+        Row: {
+          admin_notes: string | null
+          community_name: string
+          created_at: string
+          id: string
+          reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          community_name: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          community_name?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       community_invites: {
         Row: {
           community_id: string
@@ -2394,6 +2433,38 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       utility_seller_areas: {
         Row: {
           created_at: string
@@ -2743,6 +2814,7 @@ export type Database = {
       am_i_verified: { Args: never; Returns: boolean }
       anonymize_user_data: { Args: { _uid: string }; Returns: undefined }
       auto_cancel_stale_utility_requests: { Args: never; Returns: number }
+      can_use_community: { Args: never; Returns: boolean }
       cancel_community_invite: {
         Args: { _invite_id: string }
         Returns: boolean
@@ -2884,9 +2956,22 @@ export type Database = {
       my_normalized_mobile: { Args: never; Returns: string }
       prune_inactive_community_members: { Args: never; Returns: number }
       remove_community_member: { Args: { _user_id: string }; Returns: boolean }
+      request_community_access: {
+        Args: { _community_name: string; _reason?: string }
+        Returns: string
+      }
       respond_to_community_invite: {
         Args: { _accept: boolean; _invite_id: string }
         Returns: boolean
+      }
+      review_community_access: {
+        Args: {
+          _approve: boolean
+          _notes?: string
+          _request_id: string
+          _role_id?: string
+        }
+        Returns: undefined
       }
       start_account_verification: { Args: never; Returns: string }
     }
