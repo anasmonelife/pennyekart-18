@@ -15,11 +15,13 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Users, IndianRupee, TrendingUp, Percent, Download, Loader2, Crown, Save } from "lucide-react";
+import { Users, IndianRupee, TrendingUp, Percent, Download, Loader2, Crown, Save, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { commissionForProfit, isValidCommissionRule, type CommissionRule } from "@/lib/communityCommission";
 
 const COMMISSION_KEY = "community_creator_commission_percent";
+const COMMISSION_RULES_KEY = "community_creator_commission_rules";
 
 interface SummaryRow {
   community_id: string;
@@ -27,6 +29,7 @@ interface SummaryRow {
   creator_user_id: string;
   creator_name: string | null;
   creator_mobile: string | null;
+  creator_role_id: string | null;
   member_count: number;
   order_count: number;
   revenue: number;
@@ -46,6 +49,11 @@ interface MemberRow {
   cost: number;
   profit: number;
   unmatched_items: number;
+}
+
+interface RoleRow {
+  id: string;
+  name: string;
 }
 
 type Period = "this_month" | "last_month" | "all" | "custom";
@@ -83,6 +91,13 @@ const CommunitiesPage = () => {
   const [customTo, setCustomTo] = useState(toISODate(new Date()));
   const [commission, setCommission] = useState("10");
   const [savingCommission, setSavingCommission] = useState(false);
+  const [roles, setRoles] = useState<RoleRow[]>([]);
+  const [rules, setRules] = useState<Record<string, CommissionRule>>({});
+  const [selectedRole, setSelectedRole] = useState("");
+  const [minimum, setMinimum] = useState("0");
+  const [maximum, setMaximum] = useState("100");
+  const [rate, setRate] = useState("10");
+  const [savingRule, setSavingRule] = useState(false);
 
   const [detail, setDetail] = useState<SummaryRow | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
@@ -90,13 +105,25 @@ const CommunitiesPage = () => {
 
   const range = useMemo(() => resolveRange(period, customFrom, customTo), [period, customFrom, customTo]);
   const pct = Number(commission) || 0;
+  const communityCommission = (row: SummaryRow) => commissionForProfit(row.profit, row.creator_role_id, rules, pct);
+  const communityRate = (row: SummaryRow) => {
+    const roleRule = row.creator_role_id ? rules[row.creator_role_id] : undefined;
+    return roleRule && isValidCommissionRule(roleRule) ? roleRule.rate : pct;
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await rpc("get_community_revenue_summary", { _from: range.from, _to: range.to });
     if (error) toast.error(error.message.replace(/^.*?:\s*/, ""));
-    setRows(((data as SummaryRow[] | null) ?? []).map((r) => ({
+    const summaries = (data as SummaryRow[] | null) ?? [];
+    const creatorIds = [...new Set(summaries.map((r) => r.creator_user_id).filter(Boolean))];
+    const { data: creatorProfiles } = creatorIds.length
+      ? await supabase.from("profiles").select("user_id, role_id").in("user_id", creatorIds)
+      : { data: [] };
+    const roleByCreator = new Map((creatorProfiles ?? []).map((profile) => [profile.user_id, profile.role_id]));
+    setRows(summaries.map((r) => ({
       ...r,
+      creator_role_id: roleByCreator.get(r.creator_user_id) ?? null,
       revenue: Number(r.revenue),
       cost: Number(r.cost),
       profit: Number(r.profit),
@@ -111,14 +138,35 @@ const CommunitiesPage = () => {
   useEffect(() => {
     supabase
       .from("app_settings")
-      .select("value")
-      .eq("key", COMMISSION_KEY)
-      .maybeSingle()
+      .select("key, value")
+      .in("key", [COMMISSION_KEY, COMMISSION_RULES_KEY])
       .then(({ data }) => {
-        const v = (data as { value?: string } | null)?.value;
-        if (v) setCommission(v);
+        const settings = (data ?? []) as { key: string; value: string | null }[];
+        const savedFallback = settings.find((setting) => setting.key === COMMISSION_KEY)?.value;
+        if (savedFallback) setCommission(savedFallback);
+        const storedRules = settings.find((setting) => setting.key === COMMISSION_RULES_KEY)?.value;
+        if (storedRules) {
+          try {
+            const parsed = JSON.parse(storedRules) as Record<string, CommissionRule>;
+            setRules(Object.fromEntries(Object.entries(parsed).filter(([, rule]) => isValidCommissionRule(rule))));
+          } catch {
+            setRules({});
+          }
+        }
       });
+    supabase.from("roles").select("id, name").order("name").then(({ data }) => {
+      const availableRoles = (data ?? []) as RoleRow[];
+      setRoles(availableRoles);
+      setSelectedRole((current) => current || availableRoles[0]?.id || "");
+    });
   }, []);
+
+  useEffect(() => {
+    const rule = rules[selectedRole];
+    setMinimum(rule ? String(rule.minimum) : "0");
+    setMaximum(rule ? String(rule.maximum) : "100");
+    setRate(rule ? String(rule.rate) : commission);
+  }, [selectedRole, rules, commission]);
 
   const saveCommission = async () => {
     const value = Number(commission);
@@ -139,6 +187,42 @@ const CommunitiesPage = () => {
       return;
     }
     toast.success("Commission percentage saved");
+  };
+
+  const saveRoleRule = async () => {
+    const rule = { minimum: Number(minimum), maximum: Number(maximum), rate: Number(rate) };
+    if (!selectedRole || !isValidCommissionRule(rule)) {
+      toast.error("Set a valid range from 0 to 100%, with the rate inside that range");
+      return;
+    }
+    const nextRules = { ...rules, [selectedRole]: rule };
+    setSavingRule(true);
+    const { error } = await supabase.from("app_settings").upsert(
+      { key: COMMISSION_RULES_KEY, value: JSON.stringify(nextRules), description: "Community creator commission rules by role" },
+      { onConflict: "key" },
+    );
+    setSavingRule(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setRules(nextRules);
+    toast.success("Role commission rule saved");
+  };
+
+  const removeRoleRule = async (roleId: string) => {
+    const nextRules = { ...rules };
+    delete nextRules[roleId];
+    const { error } = await supabase.from("app_settings").upsert(
+      { key: COMMISSION_RULES_KEY, value: JSON.stringify(nextRules), description: "Community creator commission rules by role" },
+      { onConflict: "key" },
+    );
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setRules(nextRules);
+    toast.success("Role commission rule removed");
   };
 
   const openDetail = async (row: SummaryRow) => {
@@ -164,8 +248,9 @@ const CommunitiesPage = () => {
     const profit = rows.reduce((s, r) => s + r.profit, 0);
     const memberCount = rows.reduce((s, r) => s + r.member_count, 0);
     const orderCount = rows.reduce((s, r) => s + r.order_count, 0);
-    return { revenue, profit, memberCount, orderCount, commission: (profit * pct) / 100 };
-  }, [rows, pct]);
+    const commission = rows.reduce((sum, row) => sum + communityCommission(row), 0);
+    return { revenue, profit, memberCount, orderCount, commission };
+  }, [rows, pct, rules]);
 
   const exportMembers = () => {
     if (!detail) return;
@@ -228,7 +313,7 @@ const CommunitiesPage = () => {
               </>
             )}
             <div className="space-y-1.5">
-              <Label htmlFor="commission">Creator commission (% of profit)</Label>
+              <Label htmlFor="commission">Fallback commission (% of profit)</Label>
               <div className="flex gap-2">
                 <Input
                   id="commission"
@@ -244,6 +329,61 @@ const CommunitiesPage = () => {
                 </Button>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Role commission rules</CardTitle>
+            <p className="text-sm text-muted-foreground">Set an allowed range and active rate for each creator role. Community commissions use the creator’s assigned role.</p>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(180px,1.5fr)_repeat(3,minmax(120px,1fr))_auto] lg:items-end">
+              <div className="space-y-1.5">
+                <Label htmlFor="commission-role">Role</Label>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger id="commission-role"><SelectValue placeholder="Select a role" /></SelectTrigger>
+                  <SelectContent>
+                    {roles.map((role) => <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="commission-min">Minimum (%)</Label>
+                <Input id="commission-min" type="number" min="0" max="100" step="0.1" value={minimum} onChange={(event) => setMinimum(event.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="commission-max">Maximum (%)</Label>
+                <Input id="commission-max" type="number" min="0" max="100" step="0.1" value={maximum} onChange={(event) => setMaximum(event.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="commission-rate">Active rate (%)</Label>
+                <Input id="commission-rate" type="number" min="0" max="100" step="0.1" value={rate} onChange={(event) => setRate(event.target.value)} />
+              </div>
+              <Button onClick={saveRoleRule} disabled={savingRule || !selectedRole}>
+                {savingRule ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Save rule
+              </Button>
+            </div>
+            {Object.keys(rules).length > 0 ? (
+              <div className="divide-y rounded-md border">
+                {roles.filter((role) => rules[role.id]).map((role) => (
+                  <div key={role.id} className="flex flex-wrap items-center gap-3 px-3 py-2.5">
+                    <span className="min-w-32 flex-1 font-medium">{role.name}</span>
+                    <span className="text-sm text-muted-foreground">Range {rules[role.id].minimum}%–{rules[role.id].maximum}%</span>
+                    <Badge variant="secondary">Rate {rules[role.id].rate}%</Badge>
+                    <Button size="icon" variant="ghost" aria-label={`Edit ${role.name} rule`} title="Edit rule" onClick={() => setSelectedRole(role.id)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" aria-label={`Remove ${role.name} rule`} title="Remove rule" onClick={() => removeRoleRule(role.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No role-specific commission rules saved. The fallback rate is used until a rule is added.</p>
+            )}
           </CardContent>
         </Card>
 
@@ -314,7 +454,10 @@ const CommunitiesPage = () => {
                         <TableCell className="text-right">{money(r.cost)}</TableCell>
                         <TableCell className="text-right font-medium">{money(r.profit)}</TableCell>
                         <TableCell className="text-right">
-                          <Badge variant="secondary">{money((r.profit * pct) / 100)}</Badge>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant="secondary">{money(communityCommission(r))}</Badge>
+                            <span className="text-xs text-muted-foreground">{communityRate(r)}%</span>
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button size="sm" variant="outline" onClick={() => openDetail(r)}>
@@ -337,6 +480,12 @@ const CommunitiesPage = () => {
           <DialogHeader>
             <DialogTitle>{detail?.community_name} — members</DialogTitle>
           </DialogHeader>
+          {detail && (
+            <div className="rounded-md border p-3">
+              <p className="text-xs text-muted-foreground">Creator commission · {communityRate(detail)}% of profit</p>
+              <p className="text-lg font-semibold">{money(communityCommission(detail))}</p>
+            </div>
+          )}
           {memberLoading ? (
             <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" /> Loading members...
