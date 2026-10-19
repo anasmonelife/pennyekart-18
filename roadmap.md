@@ -1,5 +1,10 @@
 # Roadmap
 
+## Community role access and requests
+- [ ] Restrict My Community to Coordinator, Group Leader, and Pro; let other users request access.
+- [ ] Add admin review with eligible-role assignment and activation enforced on the server.
+- [ ] Run focused tests and verify available preview checks (authenticated checks blocked by external Supabase).
+
 ## Delivery staff customer contact alert
 - [ ] Add a one-time assigned-staff action that records the contact attempt and sends an in-app order notice plus Firebase push.
 - [ ] Show the notice on the customer's active order and support push deep links; verify assignment checks and repeat prevention.
