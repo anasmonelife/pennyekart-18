@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, RefreshCw, MapPin, Download, ChevronRight, ChevronDown, ShieldCheck } from "lucide-react";
 import { commissionRateForRole, type CommissionRule } from "@/lib/communityCommission";
 import { groupAllocationsByRole, normalizeRoleName, roleLabel, type AllocationPerson } from "@/lib/elifeAllocation";
@@ -186,9 +186,9 @@ export default function CommissionAllocationTab({ roles, rules, fallbackRate }: 
           <DialogHeader>
             <DialogTitle>{openGroup ? `${roleLabel(openGroup.role)} (${openGroup.people.length})` : ""}</DialogTitle>
             {openGroup && (
-              <p className="text-sm text-muted-foreground">
+              <DialogDescription>
                 Commission {commissionRateForRole(pennyRoleId(openGroup.role), rules, fallbackRate)}% of profit · tap a person to see their panchayaths
-              </p>
+              </DialogDescription>
             )}
           </DialogHeader>
           <div className="space-y-2">
