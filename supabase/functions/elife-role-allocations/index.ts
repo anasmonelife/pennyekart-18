@@ -1,6 +1,22 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { adminClient, corsHeaders, getUserId, json } from "../_shared/auth.ts";
-import { normalizeMobile, pickMobile, pickRole } from "../elife-role-sync/match.ts";
+
+const normalizeMobile = (raw: unknown) => {
+  const s = String(raw ?? "").replace(/\D/g, "");
+  return s.length >= 10 ? s.slice(-10) : "";
+};
+const normalizeRole = (raw: unknown) =>
+  String(raw ?? "").trim().toLowerCase().replace(/[_\-]+/g, " ").replace(/\s+/g, " ");
+const MOBILE_COLS = ["mobile", "mobile_number", "phone", "phone_number", "whatsapp_number"];
+const ROLE_COLS = ["role", "role_name", "designation", "agent_role", "position", "rank"];
+const pickMobile = (row: Record<string, unknown>) => {
+  for (const c of MOBILE_COLS) { const m = normalizeMobile(row[c]); if (m) return m; }
+  return "";
+};
+const pickRole = (row: Record<string, unknown>) => {
+  for (const c of ROLE_COLS) { const r = normalizeRole(row[c]); if (r) return r; }
+  return "";
+};
 
 // Read-only: lists e-Life people (admins + Pennyekart agents) with their role and allocated panchayaths.
 const PEOPLE_TABLES = ["admins", "pennyekart_agents"];
