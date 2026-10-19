@@ -62,7 +62,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .eq("user_id", userId)
           .maybeSingle();
         if (!error) {
-          if (mountedRef.current) setProfile(data as unknown as Profile | null);
+          const { data: assignedRole } = await supabase.from("user_roles").select("role_id").eq("user_id", userId).maybeSingle();
+          if (mountedRef.current) setProfile(data ? { ...data, role_id: assignedRole?.role_id ?? data.role_id } as unknown as Profile : null);
           return;
         }
         console.error("Failed to fetch profile:", error);
