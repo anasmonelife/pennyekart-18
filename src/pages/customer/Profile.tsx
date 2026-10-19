@@ -21,7 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import NotificationDetailDialog from "@/components/NotificationDetailDialog";
 import ScratchCardWidget from "@/components/ScratchCardWidget";
 import VerifyAccountCard from "@/components/customer/VerifyAccountCard";
-import CommunityCard from "@/components/customer/CommunityCard";
+import CommunityAccessSection from "@/components/customer/CommunityAccessSection";
 import AddressBook from "@/components/customer/AddressBook";
 import OrderDetailDialog from "@/components/OrderDetailDialog";
 import { BadgeCheck } from "lucide-react";
@@ -607,7 +607,7 @@ const Profile = () => {
 
         {/* My Community */}
         {activeSection === "profile" && user && (
-          <CommunityCard userId={user.id} />
+          <CommunityAccessSection userId={user.id} />
         )}
 
         {activeSection === "profile" && <TodaysWorkSection />}

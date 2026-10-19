@@ -1,5 +1,8 @@
 # Architecture rules
 
+- Resolve community eligibility on the server from protected user_roles with a legacy-role fallback; approve requests atomically in a super-admin-checked RPC, and synchronize existing administrator role changes so grants cannot diverge.
+- Keep community access requests separate from membership invitations; the profile wrapper gates the existing community card and the active admin Communities page hosts the review queue.
+
 - Share automatic-cancellation classification and partner contact visibility in utilityServices helpers; keep this presentation-only so booking permissions and actions remain unchanged.
 
 - Keep utility reminder pause timestamps scoped to the signed-in seller in a dedicated client hook; suppress only automatic in-app alerts and their floating reminder while leaving Firebase delivery and request actions unchanged.
