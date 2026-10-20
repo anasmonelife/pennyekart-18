@@ -119,10 +119,11 @@ Deno.serve(async (req) => {
         const dedupe = `${mobile || r.id}:${role}`;
         if (seen.has(dedupe)) continue;
         seen.add(dedupe);
-        const ids = new Set<string>();
-        for (const c of PANCHAYATH_COLS) toIds(r[c]).forEach((id) => ids.add(id));
-        for (const c of refCols) links.get(`${c}:${r.id}`)?.forEach((id) => ids.add(id));
-        if (r.user_id) links.get(`user_id:${r.user_id}`)?.forEach((id) => ids.add(id));
+        const ids = new Set<string>(allocatedPanchayathIds(r, role));
+        if (role !== "coordinator") {
+          for (const c of refCols) links.get(`${c}:${r.id}`)?.forEach((id) => ids.add(id));
+          if (r.user_id) links.get(`user_id:${r.user_id}`)?.forEach((id) => ids.add(id));
+        }
         people.push({
           id: `${t}:${r.id}`,
           source: t,
@@ -130,6 +131,7 @@ Deno.serve(async (req) => {
           mobile: mobile || null,
           role,
           ward: r.ward ?? null,
+          wards: allocatedWards(r, role),
           is_active: r.is_active !== false,
           panchayaths: [...ids].map((id) => panchayaths.get(id) ?? { id, name: "Unknown panchayath", district: null }),
         });
