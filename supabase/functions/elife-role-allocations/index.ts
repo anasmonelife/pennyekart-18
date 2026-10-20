@@ -1,12 +1,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { adminClient, corsHeaders, getUserId, json } from "../_shared/auth.ts";
+import { allocatedPanchayathIds, allocatedWards, normalizeRole, toIds } from "./allocation.ts";
 
 const normalizeMobile = (raw: unknown) => {
   const s = String(raw ?? "").replace(/\D/g, "");
   return s.length >= 10 ? s.slice(-10) : "";
 };
-const normalizeRole = (raw: unknown) =>
-  String(raw ?? "").trim().toLowerCase().replace(/[_\-]+/g, " ").replace(/\s+/g, " ");
 const MOBILE_COLS = ["mobile", "mobile_number", "phone", "phone_number", "whatsapp_number"];
 const ROLE_COLS = ["role", "role_name", "designation", "agent_role", "position", "rank"];
 const pickMobile = (row: Record<string, unknown>) => {
@@ -20,7 +19,6 @@ const pickRole = (row: Record<string, unknown>) => {
 
 // Read-only: lists e-Life people (admins + Pennyekart agents) with their role and allocated panchayaths.
 const PEOPLE_TABLES = ["admins", "pennyekart_agents"];
-const PANCHAYATH_COLS = ["panchayath_id", "panchayath_ids", "assigned_panchayaths", "allocated_panchayaths", "panchayaths"];
 const PERSON_REF_COLS = ["admin_id", "agent_id", "pennyekart_agent_id", "user_id", "member_id"];
 
 const fetchAll = async (client: any, table: string) => {
@@ -32,17 +30,6 @@ const fetchAll = async (client: any, table: string) => {
     if (!data || data.length < 1000) break;
   }
   return { rows, error: null as string | null };
-};
-
-const toIds = (v: unknown): string[] => {
-  if (v === null || v === undefined || v === "") return [];
-  if (Array.isArray(v)) return v.flatMap(toIds);
-  if (typeof v === "object") { const o = v as Record<string, unknown>; return toIds(o.id ?? o.panchayath_id); }
-  const s = String(v).trim();
-  if (s.startsWith("[") || s.startsWith("{")) {
-    try { return toIds(JSON.parse(s.replace(/^\{(.*)\}$/, "[$1]"))); } catch { /* fall through */ }
-  }
-  return s.split(",").map((x) => x.trim().replace(/^"|"$/g, "")).filter(Boolean);
 };
 
 const pickName = (r: Record<string, any>) =>
