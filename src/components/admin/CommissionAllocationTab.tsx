@@ -149,7 +149,11 @@ export default function CommissionAllocationTab({ roles, rules, fallbackRate, re
         setSavedAt(null);
         void refresh();
       }
-    })();
+    })().catch((e: unknown) => {
+      if (cancelled) return;
+      setError(e instanceof Error ? e.message : "Could not load saved commission allocation");
+      setLoading(false);
+    });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period, ready]);
