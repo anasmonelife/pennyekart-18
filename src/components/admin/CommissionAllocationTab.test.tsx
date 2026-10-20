@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ invoke: vi.fn(), from: vi.fn(), rpc: vi.fn() }));
+const mocks = vi.hoisted(() => ({ invoke: vi.fn(), from: vi.fn(), rpc: vi.fn(), inserted: vi.fn() }));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: { functions: { invoke: mocks.invoke }, from: mocks.from, rpc: mocks.rpc },
 }));
@@ -14,9 +14,10 @@ const person = (id: string, name: string, role: string, panchayaths: string[]) =
 
 const mockQuery = (data: unknown) => {
   const query: Record<string, (...args: unknown[]) => unknown> = {};
-  for (const method of ["select", "eq", "order", "limit", "in", "insert"]) {
+  for (const method of ["select", "eq", "order", "limit", "in"]) {
     query[method] = () => query;
   }
+  query.insert = (values: unknown) => { mocks.inserted(values); return query; };
   query.maybeSingle = async () => ({ data, error: null });
   query.then = (resolve: (result: unknown) => unknown) => Promise.resolve({ data, error: null }).then(resolve);
   return query;
@@ -26,8 +27,7 @@ describe("commission allocation cards", () => {
   it("fetches, calculates, saves, and reveals a person's area communities", async () => {
     mocks.from.mockImplementation((table: string) => mockQuery(
       table === "profiles" ? [{ user_id: "creator-1", local_body_id: "body-1", ward_number: 7 }]
-        : table === "locations_local_bodies" ? [{ id: "body-1", name: "Kodur" }]
-          : table === "commission_allocation_snapshots" ? { created_at: "2026-10-20T00:00:00Z" } : [],
+        : table === "locations_local_bodies" ? [{ id: "body-1", name: "Kodur" }] : [],
     ));
     mocks.invoke.mockResolvedValue({ data: { people: [
       person("1", "Anu", "coordinator", ["Kodur"]),
@@ -47,6 +47,9 @@ describe("commission allocation cards", () => {
     expect(screen.getByText("Profit ₹500")).toBeInTheDocument();
     expect(mocks.invoke).toHaveBeenCalledWith("elife-role-allocations");
     expect(mocks.rpc).toHaveBeenCalledWith("get_community_revenue_summary", expect.any(Object));
+    expect(mocks.inserted).toHaveBeenCalledWith(expect.objectContaining({
+      period_key: expect.any(String), total_profit: 500, total_commission: 50,
+    }));
   });
 
   it("loads the saved period snapshot without fetching e-Life again", async () => {
