@@ -97,10 +97,10 @@ export default function CommissionAllocationTab({ roles, rules, fallbackRate, re
       });
 
       const allocated = buildAllocation(elifePeople, communities, (role) => commissionRateForRole(pennyRoleId(role), rules, fallbackRate));
-      const total_profit = new Set<string>();
+      const seen = new Set<string>();
       let profitSum = 0;
       for (const p of allocated) for (const c of p.communities) {
-        if (!total_profit.has(c.community_id)) { total_profit.add(c.community_id); profitSum += c.profit; }
+        if (!seen.has(c.community_id)) { seen.add(c.community_id); profitSum += c.profit; }
       }
       const total_commission = allocated.reduce((s, p) => s + p.commission, 0);
 

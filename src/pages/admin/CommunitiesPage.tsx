@@ -100,6 +100,7 @@ const CommunitiesPage = () => {
   const [maximum, setMaximum] = useState("100");
   const [rate, setRate] = useState("10");
   const [savingRule, setSavingRule] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   const [detail, setDetail] = useState<SummaryRow | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
@@ -155,6 +156,7 @@ const CommunitiesPage = () => {
             setRules({});
           }
         }
+        setSettingsLoaded(true);
       });
     supabase.from("roles").select("id, name").order("name").then(({ data }) => {
       const availableRoles = (data ?? []) as RoleRow[];
@@ -291,7 +293,7 @@ const CommunitiesPage = () => {
             <TabsTrigger value="allocation">Commission allocation</TabsTrigger>
           </TabsList>
           <TabsContent value="allocation">
-            <CommissionAllocationTab roles={roles} rules={rules} fallbackRate={pct} />
+            <CommissionAllocationTab roles={roles} rules={rules} fallbackRate={pct} ready={settingsLoaded} />
           </TabsContent>
           <TabsContent value="communities" className="space-y-6">
 
