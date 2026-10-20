@@ -290,6 +290,48 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_allocation_snapshots: {
+        Row: {
+          blocked_tables: string[]
+          created_at: string
+          created_by: string | null
+          id: string
+          people: Json
+          period_from: string | null
+          period_key: string
+          period_to: string | null
+          total_commission: number
+          total_profit: number
+          updated_at: string
+        }
+        Insert: {
+          blocked_tables?: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          people?: Json
+          period_from?: string | null
+          period_key: string
+          period_to?: string | null
+          total_commission?: number
+          total_profit?: number
+          updated_at?: string
+        }
+        Update: {
+          blocked_tables?: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          people?: Json
+          period_from?: string | null
+          period_key?: string
+          period_to?: string | null
+          total_commission?: number
+          total_profit?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       communities: {
         Row: {
           created_at: string

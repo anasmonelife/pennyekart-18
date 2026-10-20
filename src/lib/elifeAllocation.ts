@@ -40,8 +40,8 @@ export const isAllocationRole = (role: string) => allocationRoleRank(role) >= 0;
 export const roleLabel = (role: string) =>
   normalizeRoleName(role).replace(/\b\w/g, (c) => c.toUpperCase());
 
-export const groupAllocationsByRole = (people: AllocationPerson[]) => {
-  const groups = new Map<string, AllocationPerson[]>();
+export const groupAllocationsByRole = <T extends AllocationPerson>(people: T[]) => {
+  const groups = new Map<string, T[]>();
   for (const p of people) {
     if (!isAllocationRole(p.role)) continue;
     const key = normalizeRoleName(p.role);
