@@ -395,6 +395,72 @@ export type Database = {
         }
         Relationships: []
       }
+      community_commission_allocations: {
+        Row: {
+          allocated_by: string
+          amount: number
+          calculated_commission: number
+          commission_rate: number
+          community_id: string
+          community_name: string
+          created_at: string
+          customer_user_id: string
+          id: string
+          period_from: string
+          period_to: string
+          total_profit: number
+          updated_at: string
+          wallet_transaction_id: string
+        }
+        Insert: {
+          allocated_by: string
+          amount: number
+          calculated_commission: number
+          commission_rate: number
+          community_id: string
+          community_name: string
+          created_at?: string
+          customer_user_id: string
+          id?: string
+          period_from: string
+          period_to: string
+          total_profit: number
+          updated_at?: string
+          wallet_transaction_id: string
+        }
+        Update: {
+          allocated_by?: string
+          amount?: number
+          calculated_commission?: number
+          commission_rate?: number
+          community_id?: string
+          community_name?: string
+          created_at?: string
+          customer_user_id?: string
+          id?: string
+          period_from?: string
+          period_to?: string
+          total_profit?: number
+          updated_at?: string
+          wallet_transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_commission_allocations_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_commission_allocations_wallet_transaction_id_fkey"
+            columns: ["wallet_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "customer_wallet_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_invites: {
         Row: {
           community_id: string
@@ -2853,6 +2919,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      allocate_community_commission: {
+        Args: {
+          _amount?: number
+          _community_id: string
+          _from: string
+          _to: string
+        }
+        Returns: string
+      }
       am_i_verified: { Args: never; Returns: boolean }
       anonymize_user_data: { Args: { _uid: string }; Returns: undefined }
       auto_cancel_stale_utility_requests: { Args: never; Returns: number }
