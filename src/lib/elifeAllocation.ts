@@ -6,6 +6,8 @@ export interface AllocationPerson {
   mobile: string | null;
   role: string;
   ward: string | number | null;
+  /** Coordinators only: wards they cover inside their single panchayath. */
+  wards?: string[];
   is_active: boolean;
   panchayaths: AllocationPanchayath[];
 }

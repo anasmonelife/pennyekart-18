@@ -68,13 +68,14 @@ export default function CommissionAllocationTab({ roles, rules, fallbackRate }: 
   const openGroup = visible.find((g) => g.role === openRole) ?? null;
 
   const exportCsv = () => {
-    const header = ["Role", "Name", "Mobile", "Panchayaths", "Districts", "Commission %"];
+    const header = ["Role", "Name", "Mobile", "Panchayaths", "Wards", "Districts", "Commission %"];
     const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const lines = visible.flatMap((g) => g.people.map((p) => [
       roleLabel(g.role),
       p.name ?? "",
       p.mobile ?? "",
       p.panchayaths.map((x) => x.name).join("; "),
+      (p.wards ?? []).join("; "),
       [...new Set(p.panchayaths.map((x) => x.district).filter(Boolean))].join("; "),
       String(commissionRateForRole(pennyRoleId(g.role), rules, fallbackRate)),
     ].map(esc).join(",")));
@@ -224,7 +225,11 @@ export default function CommissionAllocationTab({ roles, rules, fallbackRate }: 
                               {x.name}{x.district ? ` · ${x.district}` : ""}
                             </Badge>
                           ))}
-                          {p.ward != null && p.ward !== "" && <Badge variant="outline" className="font-normal">Ward {String(p.ward)}</Badge>}
+                          {p.wards && p.wards.length > 0 && (
+                            <Badge variant="outline" className="font-normal">
+                              {p.wards.length === 1 ? "Ward" : "Wards"} {p.wards.join(", ")}
+                            </Badge>
+                          )}
                         </div>
                       ) : <p className="text-xs text-muted-foreground">Not allocated</p>}
                     </div>
