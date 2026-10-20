@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, RefreshCw, MapPin, Download, ChevronRight, ChevronDown, ShieldCheck, Users } from "lucide-react";
 import { commissionRateForRole, type CommissionRule } from "@/lib/communityCommission";
+import CommunityCommissionTable from "./CommunityCommissionTable";
 import { groupAllocationsByRole, isAllocationRole, normalizeRoleName, roleLabel, type AllocationPerson } from "@/lib/elifeAllocation";
 import {
   buildAllocation, periodRange, type AllocatedPerson, type AllocationPeriod, type AreaCommunity,
@@ -203,6 +204,7 @@ export default function CommissionAllocationTab({ roles, rules, fallbackRate, re
 
   return (
     <div className="space-y-4">
+      <CommunityCommissionTable rules={rules} fallbackRate={fallbackRate} ready={ready} />
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 pb-3">
           <div>
