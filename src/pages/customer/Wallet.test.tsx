@@ -30,8 +30,8 @@ describe("customer wallet sales commission tab", () => {
   it("lists allocated payouts with community, role, period and amount", async () => {
     mocks.from.mockImplementation((table: string) => mockQuery(table === "community_commission_allocations" ? payments : []));
     render(<CustomerWallet />);
-    fireEvent.click(await screen.findByRole("tab", { name: /Sales commission/i }));
-    console.log("DOM:", document.body.innerHTML.slice(0, 3000)); await waitFor(() => expect(screen.getByText("Kodur Circle")).toBeInTheDocument());
+    fireEvent.mouseDown(await screen.findByRole("tab", { name: /Sales commission/i })); fireEvent.click(await screen.findByRole("tab", { name: /Sales commission/i }));
+    await waitFor(() => expect(screen.getByText("Kodur Circle")).toBeInTheDocument());
     expect(screen.getByText(/Creator/i)).toBeInTheDocument();
     expect(screen.getByText(/2026-09-01/i)).toBeInTheDocument();
     expect(screen.getByText("+₹50.00")).toBeInTheDocument();
@@ -41,7 +41,7 @@ describe("customer wallet sales commission tab", () => {
   it("shows the empty state when nothing has been allocated", async () => {
     mocks.from.mockImplementation(() => mockQuery([]));
     render(<CustomerWallet />);
-    fireEvent.click(await screen.findByRole("tab", { name: /Sales commission/i }));
+    fireEvent.mouseDown(await screen.findByRole("tab", { name: /Sales commission/i })); fireEvent.click(await screen.findByRole("tab", { name: /Sales commission/i }));
     await waitFor(() => expect(screen.getByText("No sales commission yet")).toBeInTheDocument());
   });
 });
