@@ -111,3 +111,6 @@
 - [x] DB function cancels stale pending bookings (cancelled_by=system)
 - [x] Sweep runs on customer history, partner dashboard, admin page loads
 - [x] Customer sees "partner unavailable" notice; tests pass, build OK
+
+## Community payout allocations in admin
+- [ ] Add payout management for community creators in /admin/communities and merge all allocations of one community into a single row.
