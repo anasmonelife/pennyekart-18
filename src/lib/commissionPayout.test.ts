@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { commissionAmount, commissionRange, overlapsCommissionPeriod } from "./commissionPayout";
+import {
+  commissionAmount,
+  commissionRange,
+  overlapsCommissionPeriod,
+  payoutHeld,
+  payoutRequestable,
+  PAYOUT_HOLD_PERCENT,
+} from "./commissionPayout";
 
 describe("community commission payments", () => {
   it("divides community profit using the configured role rate", () => {

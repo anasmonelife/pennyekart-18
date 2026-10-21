@@ -28,3 +28,17 @@ export const commissionRange = (from: string, to: string) => ({
   from: new Date(`${from}T00:00:00+05:30`).toISOString(),
   to: new Date(new Date(`${to}T00:00:00+05:30`).getTime() + 86400000 - 1).toISOString(),
 });
+
+/** Percentage of sales commission the platform holds back and never pays out. */
+export const PAYOUT_HOLD_PERCENT = 20;
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Amount still requestable: 80% of total commission minus pending/verified/approved requests. */
+export const payoutRequestable = (totalCommission: number, committed: number) => {
+  const payable = round2(Math.max(totalCommission, 0) * (100 - PAYOUT_HOLD_PERCENT) / 100);
+  return Math.max(0, round2(payable - Math.max(committed, 0)));
+};
+
+export const payoutHeld = (totalCommission: number) =>
+  round2(Math.max(totalCommission, 0) * PAYOUT_HOLD_PERCENT / 100);
