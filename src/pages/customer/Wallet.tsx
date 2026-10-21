@@ -81,7 +81,7 @@ const CustomerWallet = () => {
       setMinUsage(wallet.min_usage_amount);
 
       // Fetch transactions and sales commission payments together
-      const [txns, commissions] = await Promise.all([
+      const [txns, commissionRows, payoutRows] = await Promise.all([
         supabase
           .from("customer_wallet_transactions")
           .select("*")
@@ -101,8 +101,8 @@ const CustomerWallet = () => {
       ]);
 
       if (txns.data) setTransactions(txns.data as Transaction[]);
-      if (commissions.data) setCommissions(commissions.data as CommissionPayment[]);
-      if (commissions.data) setPayoutRequests((commissions[2].data ?? []) as CommissionPayoutRequest[]);
+      if (commissionRows.data) setCommissions(commissionRows.data as CommissionPayment[]);
+      if (payoutRows.data) setPayoutRequests(payoutRows.data as CommissionPayoutRequest[]);
     }
     setLoading(false);
   };
