@@ -3,6 +3,7 @@
 ## Community commission wallet allocation
 - [x] Add a role-based, editable commission allocation table for community profit by selected date period.
 - [x] Securely credit each allocated amount to the creator's wallet once and show period details in the wallet Sales Commission tab. Super-admin RPCs verify and allocate under lock; wallet tab lists community, role, period and paid date; focused wallet tests pass.
+- [ ] Finish the customer Sales Commission totals, 20% hold, payout request action, and request statuses; add the admin verify/approve/reject tab and run focused tests.
 - [ ] Verify the allocation and wallet flow in a signed-in super admin + customer session (blocked: external Supabase gives no test sign-in).
 
 ## Communities commission allocation tab

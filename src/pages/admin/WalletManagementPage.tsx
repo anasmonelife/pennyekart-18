@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
+import { committedPayoutAmount, payoutReviewActions, type CommissionPayoutRequest } from "@/lib/commissionPayout";
 import { Wallet, ArrowUpCircle, ArrowDownCircle, Settings, RefreshCw, Gift, ShoppingCart, Moon, CreditCard, Search, Eye, ShieldCheck, UserPlus } from "lucide-react";
 
 interface WalletRow {
@@ -141,6 +142,10 @@ const WalletManagementPage = () => {
   // Detail view dialog
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailWallet, setDetailWallet] = useState<WalletRow | null>(null);
+  const [payoutRequests, setPayoutRequests] = useState<CommissionPayoutRequest[]>([]);
+  const [payoutCustomerNames, setPayoutCustomerNames] = useState<Record<string, string>>({});
+  const [payoutProcessingId, setPayoutProcessingId] = useState<string | null>(null);
+  const [payoutNotes, setPayoutNotes] = useState<Record<string, string>>({});
 
   const fetchWalletRules = async () => {
     const allKeys = RULE_DEFINITIONS.flatMap((r) => [r.enabledKey, r.amountKey]);
@@ -206,8 +211,48 @@ const WalletManagementPage = () => {
 
   const fetchAll = async () => {
     setLoading(true);
-    await Promise.all([fetchCustomerWallets(), fetchSellerWallets(), fetchDeliveryWallets(), fetchWalletRules()]);
+    await Promise.all([fetchCustomerWallets(), fetchSellerWallets(), fetchDeliveryWallets(), fetchWalletRules(), fetchPayoutRequests()]);
     setLoading(false);
+  };
+
+  const fetchPayoutRequests = async () => {
+    const { data, error } = await supabase
+      .from("commission_payout_requests")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) {
+      toast({ title: "Could not load payout requests", description: error.message, variant: "destructive" });
+      setPayoutRequests([]);
+      return;
+    }
+    const requests = (data ?? []) as CommissionPayoutRequest[];
+    setPayoutRequests(requests);
+    const ids = [...new Set(requests.map((request) => request.customer_user_id))];
+    if (ids.length === 0) {
+      setPayoutCustomerNames({});
+      return;
+    }
+    const { data: profiles } = await supabase.from("profiles").select("user_id, full_name, email").in("user_id", ids);
+    setPayoutCustomerNames(Object.fromEntries((profiles ?? []).map((profile: any) => [
+      profile.user_id,
+      profile.full_name || profile.email || profile.user_id,
+    ])));
+  };
+
+  const reviewPayoutRequest = async (request: CommissionPayoutRequest, action: "verify" | "approve" | "reject") => {
+    setPayoutProcessingId(request.id);
+    const { error } = await supabase.rpc("review_commission_payout", {
+      _id: request.id,
+      _action: action,
+      _notes: payoutNotes[request.id]?.trim() || null,
+    });
+    setPayoutProcessingId(null);
+    if (error) {
+      toast({ title: "Payout request was not updated", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: action === "verify" ? "Payout request verified" : action === "approve" ? "Payout approved" : "Payout request rejected" });
+    await Promise.all([fetchPayoutRequests(), action === "approve" ? fetchCustomerWallets() : Promise.resolve()]);
   };
 
   const fetchCustomerWallets = async () => {
@@ -419,6 +464,7 @@ const WalletManagementPage = () => {
             <TabsTrigger value="customer">Customers</TabsTrigger>
             <TabsTrigger value="seller">Sellers</TabsTrigger>
             <TabsTrigger value="delivery">Delivery Staff</TabsTrigger>
+            <TabsTrigger value="payouts">Payout Requests</TabsTrigger>
           </TabsList>
 
           {/* Wallet Reward Rules Tab */}
@@ -523,6 +569,57 @@ const WalletManagementPage = () => {
                 </div>
               </CardHeader>
               <CardContent>{renderWalletTable(deliveryWallets, "delivery")}</CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="payouts">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Sales Commission Payout Requests</CardTitle>
+                <p className="text-xs text-muted-foreground">Verify requests before approving. Approval debits the customer wallet atomically.</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {payoutRequests.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">No payout requests found</p>
+                ) : payoutRequests.map((request) => {
+                  const actions = payoutReviewActions(request.status);
+                  return (
+                    <div key={request.id} className="border rounded-md p-3 space-y-3">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="font-medium">{payoutCustomerNames[request.customer_user_id] ?? request.customer_user_id}</p>
+                          <p className="text-sm">Requested ₹{Number(request.requested_amount).toFixed(2)}</p>
+                          <p className="text-xs text-muted-foreground">Commission total ₹{Number(request.commission_total).toFixed(2)} · {new Date(request.created_at).toLocaleString("en-IN")}</p>
+                          {request.admin_notes && <p className="text-xs text-muted-foreground">Latest note: {request.admin_notes}</p>}
+                        </div>
+                        <Badge variant={request.status === "approved" ? "default" : request.status === "rejected" ? "destructive" : "secondary"}>
+                          {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                        </Badge>
+                      </div>
+                      {actions.length > 0 && (
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <Input
+                            aria-label={`Note for ${payoutCustomerNames[request.customer_user_id] ?? request.customer_user_id}`}
+                            placeholder="Optional review note"
+                            value={payoutNotes[request.id] ?? ""}
+                            onChange={(event) => setPayoutNotes((previous) => ({ ...previous, [request.id]: event.target.value }))}
+                          />
+                          {actions.map((action) => (
+                            <Button
+                              key={action}
+                              size="sm"
+                              variant={action === "reject" ? "destructive" : action === "approve" ? "default" : "outline"}
+                              disabled={payoutProcessingId === request.id}
+                              onClick={() => reviewPayoutRequest(request, action)}
+                            >
+                              {payoutProcessingId === request.id ? "Saving…" : action === "verify" ? "Verify" : action === "approve" ? "Approve" : "Reject"}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
