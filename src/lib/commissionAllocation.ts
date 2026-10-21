@@ -86,7 +86,7 @@ export interface AllocationRowGroup<T> {
 }
 
 /** All allocations of one community for one period share a single table row. */
-export const groupAllocationRows = <T extends { community_id: string; period_from: string; period_to: string; recipient_type?: string }>(
+export const groupAllocationRows = <T extends { community_id: string; community_name?: string; period_from: string; period_to: string; recipient_type?: string }>(
   rows: T[],
 ): AllocationRowGroup<T>[] => {
   const map = new Map<string, AllocationRowGroup<T>>();
@@ -94,7 +94,7 @@ export const groupAllocationRows = <T extends { community_id: string; period_fro
     const key = `${r.community_id}|${r.period_from}|${r.period_to}`;
     let g = map.get(key);
     if (!g) {
-      g = { community_id: r.community_id, community_name: r.community_id, period_from: r.period_from, period_to: r.period_to, rows: [] };
+      g = { community_id: r.community_id, community_name: r.community_name ?? r.community_id, period_from: r.period_from, period_to: r.period_to, rows: [] };
       map.set(key, g);
     }
     g.rows.push(r);

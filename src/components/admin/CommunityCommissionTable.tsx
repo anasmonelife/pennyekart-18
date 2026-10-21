@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { commissionRateForRole, type CommissionRule } from "@/lib/communityCommission";
-import { commissionAmount, commissionDate } from "@/lib/commissionPayout";
-import { commissionRange } from "@/lib/commissionPayout";
-import { buildHierarchyRows, type AreaCommunity, type PayoutRow } from "@/lib/commissionAllocation";
+import { commissionAmount, commissionDate, commissionRange } from "@/lib/commissionPayout";
+import { buildHierarchyRows, groupAllocationRows, type AreaCommunity, type PayoutRow } from "@/lib/commissionAllocation";
 import { isAllocationRole, normalizeRoleName, type AllocationPerson } from "@/lib/elifeAllocation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +24,6 @@ interface SavedRow {
 interface Props { roles?: { id: string; name: string }[]; rules: Record<string, CommissionRule>; fallbackRate: number; ready: boolean }
 const money = (n: number) => `₹${Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const TYPE_LABEL: Record<string, string> = { creator: "Creator", coordinator: "Coordinator", team_leader: "Team leader", super_admin: "Super admin" };
-const TYPE_ORDER = ["creator", "coordinator", "team_leader", "super_admin"];
 
 export default function CommunityCommissionTable({ roles = [], rules, fallbackRate, ready }: Props) {
   const today = commissionDate();
@@ -117,7 +115,36 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
     setConfirm(null); await load();
   };
 
-  const sorted = [...rows].sort((a, b) => a.community_name.localeCompare(b.community_name) || TYPE_ORDER.indexOf(a.recipient_type) - TYPE_ORDER.indexOf(b.recipient_type));
+  /** One row per community: creator + hierarchy allocations of the same period stay together. */
+  const groups = groupAllocationRows(rows);
+
+  const recipientLine = (r: SavedRow) => (
+    <div key={`name-${r.id}`}>
+      <Badge variant={r.recipient_type === "creator" ? "default" : "secondary"}>{TYPE_LABEL[r.recipient_type] ?? r.recipient_type}</Badge>
+      <p className="text-xs mt-1">{r.recipient_name || "—"}{r.share_count > 1 ? ` · 1/${r.share_count} share` : ""}</p>
+      {!r.customer_user_id && <p className="text-xs text-destructive">No account</p>}
+    </div>
+  );
+  const statusLine = (r: SavedRow) => (
+    <div key={`status-${r.id}`}>
+      {r.status === "allocated" ? <>
+        <Badge variant="secondary">Allocated</Badge>
+        <p className="text-xs text-muted-foreground mt-1">{r.allocated_at && new Date(r.allocated_at).toLocaleString("en-IN")}</p>
+      </> : <Badge variant="outline">{r.status === "verified" ? "Verified" : "Pending verification"}</Badge>}
+    </div>
+  );
+  const actionLine = (r: SavedRow) => {
+    const done = r.status === "allocated";
+    const amount = amountOf(r);
+    return (
+      <div key={`action-${r.id}`} className="space-x-1 whitespace-nowrap">
+        {!done && <>
+          <Button size="sm" variant="outline" disabled={busy || !(amount > 0)} onClick={() => void verify(r)}><CheckCircle2 className="mr-1 h-4 w-4" />Verify</Button>
+          <Button size="sm" disabled={busy || r.status !== "verified" || !r.customer_user_id || edits[r.id] !== undefined} onClick={() => setConfirm(r)}><Wallet className="mr-1 h-4 w-4" />Allocate</Button>
+        </>}
+      </div>
+    );
+  };
 
   return (
     <section className="space-y-4 border-b pb-6">
@@ -134,28 +161,35 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       {loading ? <Loader2 aria-label="Loading allocation table" className="h-5 w-5 animate-spin" /> : validPeriod && (
         <div className="overflow-x-auto"><Table>
-          <TableHeader><TableRow><TableHead>Community</TableHead><TableHead>Recipient</TableHead><TableHead className="text-right">Profit</TableHead><TableHead className="text-right">Rate</TableHead><TableHead className="text-right">Calculated</TableHead><TableHead>Commission (₹)</TableHead><TableHead>Status</TableHead><TableHead /></TableRow></TableHeader>
+          <TableHeader><TableRow>
+            <TableHead>Community</TableHead><TableHead className="text-right">Profit</TableHead>
+            <TableHead>Recipients</TableHead><TableHead className="text-right">Rate · Calculated</TableHead>
+            <TableHead>Commission (₹)</TableHead><TableHead>Status</TableHead><TableHead />
+          </TableRow></TableHeader>
           <TableBody>
-            {sorted.map(r => {
-              const done = r.status === "allocated";
-              const amount = amountOf(r);
-              return <TableRow key={r.id}>
-                <TableCell className="font-medium">{r.community_name}</TableCell>
-                <TableCell><Badge variant={r.recipient_type === "creator" ? "default" : "secondary"}>{TYPE_LABEL[r.recipient_type] ?? r.recipient_type}</Badge>
-                  <p className="text-xs mt-1">{r.recipient_name || "—"}{r.share_count > 1 ? ` · 1/${r.share_count} share` : ""}</p>
-                  {!r.customer_user_id && <p className="text-xs text-destructive">No account</p>}</TableCell>
-                <TableCell className="text-right">{money(r.total_profit)}</TableCell>
-                <TableCell className="text-right">{r.commission_rate}%</TableCell>
-                <TableCell className="text-right">{money(r.calculated_commission)}</TableCell>
-                <TableCell><Input type="number" min="0.01" step="0.01" aria-label={`Commission for ${r.recipient_name ?? r.community_name}`} className="w-28" value={edits[r.id] ?? Number(r.amount).toFixed(2)} onChange={e => setEdits(p => ({ ...p, [r.id]: e.target.value }))} disabled={done || busy} /></TableCell>
-                <TableCell>{done ? <><Badge variant="secondary">Allocated</Badge><p className="text-xs text-muted-foreground mt-1">{r.allocated_at && new Date(r.allocated_at).toLocaleString("en-IN")}</p></> : <Badge variant="outline">{r.status === "verified" ? "Verified" : "Pending verification"}</Badge>}</TableCell>
-                <TableCell className="space-x-1 whitespace-nowrap">{!done && <>
-                  <Button size="sm" variant="outline" disabled={busy || !(amount > 0)} onClick={() => void verify(r)}><CheckCircle2 className="mr-1 h-4 w-4" />Verify</Button>
-                  <Button size="sm" disabled={busy || r.status !== "verified" || !r.customer_user_id || edits[r.id] !== undefined} onClick={() => setConfirm(r)}><Wallet className="mr-1 h-4 w-4" />Allocate</Button>
-                </>}</TableCell>
-              </TableRow>;
-            })}
-            {sorted.length === 0 && <TableRow><TableCell colSpan={8} className="py-8 text-center text-muted-foreground">Nothing saved for this period. Click “Calculate &amp; save”.</TableCell></TableRow>}
+            {groups.map(g => (
+              <TableRow key={g.community_id + g.period_from + g.period_to}>
+                <TableCell className="font-medium align-top">
+                  {g.community_name}
+                  {(g.period_from !== from || g.period_to !== to) && (
+                    <p className="text-xs text-muted-foreground mt-1">{g.period_from} – {g.period_to}</p>
+                  )}
+                </TableCell>
+                <TableCell className="text-right align-top">{money(g.rows[0]?.total_profit ?? 0)}</TableCell>
+                <TableCell className="space-y-2 align-top">{g.rows.map(recipientLine)}</TableCell>
+                <TableCell className="text-right align-top">
+                  <div className="space-y-2">{g.rows.map(r => (
+                    <div key={`calc-${r.id}`} className="text-xs">{r.commission_rate}% · {money(r.calculated_commission)}</div>
+                  ))}</div>
+                </TableCell>
+                <TableCell className="space-y-2 align-top">{g.rows.map(r => (
+                  <Input key={`amount-${r.id}`} type="number" min="0.01" step="0.01" aria-label={`Commission for ${r.recipient_name ?? r.community_name}`} className="w-28" value={edits[r.id] ?? Number(r.amount).toFixed(2)} onChange={e => setEdits(p => ({ ...p, [r.id]: e.target.value }))} disabled={r.status === "allocated" || busy} />
+                ))}</TableCell>
+                <TableCell className="space-y-2 align-top">{g.rows.map(statusLine)}</TableCell>
+                <TableCell className="align-top">{g.rows.map(actionLine)}</TableCell>
+              </TableRow>
+            ))}
+            {groups.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Nothing saved for this period. Click “Calculate &amp; save”.</TableCell></TableRow>}
           </TableBody>
         </Table></div>
       )}
