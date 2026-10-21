@@ -332,6 +332,48 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_payout_requests: {
+        Row: {
+          admin_notes: string | null
+          approved_at: string | null
+          commission_total: number
+          created_at: string
+          customer_user_id: string
+          id: string
+          rejected_at: string | null
+          requested_amount: number
+          status: string
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          approved_at?: string | null
+          commission_total?: number
+          created_at?: string
+          customer_user_id: string
+          id?: string
+          rejected_at?: string | null
+          requested_amount: number
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          approved_at?: string | null
+          commission_total?: number
+          created_at?: string
+          customer_user_id?: string
+          id?: string
+          rejected_at?: string | null
+          requested_amount?: number
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       communities: {
         Row: {
           created_at: string
@@ -3089,12 +3131,17 @@ export type Database = {
       my_normalized_mobile: { Args: never; Returns: string }
       prune_inactive_community_members: { Args: never; Returns: number }
       remove_community_member: { Args: { _user_id: string }; Returns: boolean }
+      request_commission_payout: { Args: { _amount: number }; Returns: string }
       request_community_access: {
         Args: { _community_name: string; _reason?: string }
         Returns: string
       }
       respond_to_community_invite: {
         Args: { _accept: boolean; _invite_id: string }
+        Returns: boolean
+      }
+      review_commission_payout: {
+        Args: { _action: string; _id: string; _notes?: string }
         Returns: boolean
       }
       review_community_access: {
