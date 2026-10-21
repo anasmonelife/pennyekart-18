@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Community commission wallet allocation
-- [ ] Add a role-based, editable commission allocation table for community profit by selected date period.
-- [ ] Securely credit each allocated amount to the creator's wallet once and show period details in the wallet Sales Commission tab.
-- [ ] Add focused calculation/duplicate-allocation tests and verify preview diagnostics.
+- [x] Add a role-based, editable commission allocation table for community profit by selected date period.
+- [x] Securely credit each allocated amount to the creator's wallet once and show period details in the wallet Sales Commission tab. Super-admin RPCs verify and allocate under lock; wallet tab lists community, role, period and paid date; focused wallet tests pass.
+- [ ] Verify the allocation and wallet flow in a signed-in super admin + customer session (blocked: external Supabase gives no test sign-in).
 
 ## Communities commission allocation tab
 - [x] Show communities in each e-Life person's allocated area, calculate commission using saved role rates, persist period snapshots, and provide refresh, search, filters, and CSV export. Added checks for saved-snapshot loading and fresh calculation/save; focused tests pass.
