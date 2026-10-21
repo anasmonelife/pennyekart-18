@@ -31,7 +31,7 @@ describe("customer wallet sales commission tab", () => {
     mocks.from.mockImplementation((table: string) => mockQuery(table === "community_commission_allocations" ? payments : []));
     render(<CustomerWallet />);
     fireEvent.click(await screen.findByRole("tab", { name: /Sales commission/i }));
-    await waitFor(() => expect(screen.getByText("Kodur Circle")).toBeInTheDocument());
+    console.log("DOM:", document.body.innerHTML.slice(0, 3000)); await waitFor(() => expect(screen.getByText("Kodur Circle")).toBeInTheDocument());
     expect(screen.getByText(/Creator/i)).toBeInTheDocument();
     expect(screen.getByText(/2026-09-01/i)).toBeInTheDocument();
     expect(screen.getByText("+₹50.00")).toBeInTheDocument();
