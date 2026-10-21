@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Wallet, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, Wallet, ArrowDownLeft, ArrowUpRight, Percent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,12 +18,35 @@ interface Transaction {
   order_id: string | null;
 }
 
+interface CommissionPayment {
+  id: string;
+  community_name: string;
+  recipient_type: string;
+  period_from: string;
+  period_to: string;
+  amount: number;
+  allocated_at: string | null;
+}
+
+const ROLE_LABEL: Record<string, string> = {
+  creator: "Creator",
+  coordinator: "Coordinator",
+  team_leader: "Team leader",
+  super_admin: "Super admin",
+};
+
+const formatDate = (value: string) =>
+  new Date(value).toLocaleDateString("en-IN", {
+    day: "numeric", month: "short", year: "numeric",
+  });
+
 const CustomerWallet = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [balance, setBalance] = useState(0);
   const [minUsage, setMinUsage] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [commissions, setCommissions] = useState<CommissionPayment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,14 +70,23 @@ const CustomerWallet = () => {
       setBalance(wallet.balance);
       setMinUsage(wallet.min_usage_amount);
 
-      // Fetch transactions
-      const { data: txns } = await supabase
-        .from("customer_wallet_transactions")
-        .select("*")
-        .eq("wallet_id", wallet.id)
-        .order("created_at", { ascending: false });
+      // Fetch transactions and sales commission payments together
+      const [txns, commissions] = await Promise.all([
+        supabase
+          .from("customer_wallet_transactions")
+          .select("*")
+          .eq("wallet_id", wallet.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("community_commission_allocations")
+          .select("id, community_name, recipient_type, period_from, period_to, amount, allocated_at, status")
+          .eq("customer_user_id", user!.id)
+          .eq("status", "allocated")
+          .order("allocated_at", { ascending: false }),
+      ]);
 
-      if (txns) setTransactions(txns as Transaction[]);
+      if (txns.data) setTransactions(txns.data as Transaction[]);
+      if (commissions.data) setCommissions(commissions.data as CommissionPayment[]);
     }
     setLoading(false);
   };
@@ -102,54 +134,103 @@ const CustomerWallet = () => {
           </CardContent>
         </Card>
 
-        {/* Transaction History */}
-        <div>
-          <h2 className="text-sm font-semibold text-muted-foreground mb-3">Transaction History</h2>
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
-            </div>
-          ) : transactions.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center text-muted-foreground">
-                <Wallet className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                <p className="font-medium">No transactions yet</p>
-                <p className="text-sm mt-1">Your wallet transactions will appear here</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              {transactions.map(txn => (
-                <Card key={txn.id}>
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
-                      txn.type === "credit" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
-                    }`}>
-                      {txn.type === "credit" ? (
-                        <ArrowDownLeft className="h-4 w-4" />
-                      ) : (
-                        <ArrowUpRight className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {txn.description || (txn.type === "credit" ? "Credited" : "Debited")}
+        <Tabs defaultValue="transactions">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="transactions">Transactions</TabsTrigger>
+            <TabsTrigger value="commission">Sales commission</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="transactions" className="mt-4 space-y-2">
+            <h2 className="text-sm font-semibold text-muted-foreground mb-3">Transaction History</h2>
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+              </div>
+            ) : transactions.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  <Wallet className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                  <p className="font-medium">No transactions yet</p>
+                  <p className="text-sm mt-1">Your wallet transactions will appear here</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                {transactions.map(txn => (
+                  <Card key={txn.id}>
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                        txn.type === "credit" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                      }`}>
+                        {txn.type === "credit" ? (
+                          <ArrowDownLeft className="h-4 w-4" />
+                        ) : (
+                          <ArrowUpRight className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {txn.description || (txn.type === "credit" ? "Credited" : "Debited")}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(txn.created_at).toLocaleDateString("en-IN", {
+                            day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
+                          })}
+                        </p>
+                      </div>
+                      <p className={`text-sm font-bold ${txn.type === "credit" ? "text-green-600" : "text-red-600"}`}>
+                        {txn.type === "credit" ? "+" : "-"}₹{txn.amount.toFixed(2)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(txn.created_at).toLocaleDateString("en-IN", {
-                          day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
-                        })}
-                      </p>
-                    </div>
-                    <p className={`text-sm font-bold ${txn.type === "credit" ? "text-green-600" : "text-red-600"}`}>
-                      {txn.type === "credit" ? "+" : "-"}₹{txn.amount.toFixed(2)}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="commission" className="mt-4 space-y-2">
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+              </div>
+            ) : commissions.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  <Percent className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                  <p className="font-medium">No sales commission yet</p>
+                  <p className="text-sm mt-1">Community commission payouts will appear here</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                {commissions.map(row => (
+                  <Card key={row.id}>
+                    <CardContent className="p-3 flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center bg-primary/10 text-primary shrink-0">
+                        <Percent className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{row.community_name}</p>
+                        <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            {ROLE_LABEL[row.recipient_type] ?? row.recipient_type}
+                          </Badge>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDate(row.period_from)} – {formatDate(row.period_to)}
+                          </p>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Paid {row.allocated_at ? formatDate(row.allocated_at) : "—"}
+                        </p>
+                      </div>
+                      <p className="text-sm font-bold text-green-600">+₹{Number(row.amount).toFixed(2)}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
