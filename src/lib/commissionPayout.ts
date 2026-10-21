@@ -12,6 +12,21 @@ export interface CommissionPayment {
   created_at: string;
 }
 
+export type PayoutRequestStatus = "pending" | "verified" | "approved" | "rejected";
+
+export interface CommissionPayoutRequest {
+  id: string;
+  customer_user_id: string;
+  requested_amount: number;
+  commission_total: number;
+  status: PayoutRequestStatus;
+  admin_notes: string | null;
+  created_at: string;
+  verified_at: string | null;
+  approved_at: string | null;
+  rejected_at: string | null;
+}
+
 export const commissionAmount = (profit: number, rate: number) =>
   Math.round(Math.max(profit, 0) * rate) / 100;
 
@@ -42,3 +57,18 @@ export const payoutRequestable = (totalCommission: number, committed: number) =>
 
 export const payoutHeld = (totalCommission: number) =>
   round2(Math.max(totalCommission, 0) * PAYOUT_HOLD_PERCENT / 100);
+
+/** Pending, verified, and approved requests reserve the requestable commission. */
+export const committedPayoutAmount = (requests: Pick<CommissionPayoutRequest, "requested_amount" | "status">[]) =>
+  round2(requests.reduce((sum, request) =>
+    ["pending", "verified", "approved"].includes(request.status)
+      ? sum + Math.max(Number(request.requested_amount) || 0, 0)
+      : sum,
+  0));
+
+/** Keep approval hidden until a request has completed verification. */
+export const payoutReviewActions = (status: string): ("verify" | "approve" | "reject")[] => {
+  if (status === "pending") return ["verify", "reject"];
+  if (status === "verified") return ["approve", "reject"];
+  return [];
+};
