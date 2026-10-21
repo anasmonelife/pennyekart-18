@@ -5,6 +5,8 @@ import {
   overlapsCommissionPeriod,
   payoutHeld,
   payoutRequestable,
+  committedPayoutAmount,
+  payoutReviewActions,
   PAYOUT_HOLD_PERCENT,
 } from "./commissionPayout";
 
@@ -48,5 +50,21 @@ describe("sales commission payout requests", () => {
   it("does not go negative from rounding or bad input", () => {
     expect(payoutRequestable(-50, 0)).toBe(0);
     expect(payoutRequestable(33.33, 0)).toBe(26.66);
+  });
+
+  it("reserves pending, verified, and approved requests but excludes rejected requests", () => {
+    expect(committedPayoutAmount([
+      { requested_amount: 25, status: "pending" },
+      { requested_amount: 30, status: "verified" },
+      { requested_amount: 35, status: "approved" },
+      { requested_amount: 100, status: "rejected" },
+    ])).toBe(90);
+  });
+
+  it("requires verification before approval and hides actions after processing", () => {
+    expect(payoutReviewActions("pending")).toEqual(["verify", "reject"]);
+    expect(payoutReviewActions("verified")).toEqual(["approve", "reject"]);
+    expect(payoutReviewActions("approved")).toEqual([]);
+    expect(payoutReviewActions("rejected")).toEqual([]);
   });
 });
