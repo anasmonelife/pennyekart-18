@@ -1,116 +1,168 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { commissionRateForRole, type CommissionRule } from "@/lib/communityCommission";
-import { commissionAmount, commissionDate, commissionRange, overlapsCommissionPeriod, type CommissionPayment } from "@/lib/commissionPayout";
+import { commissionAmount, commissionDate } from "@/lib/commissionPayout";
+import { commissionRange } from "@/lib/commissionPayout";
+import { buildHierarchyRows, type AreaCommunity, type PayoutRow } from "@/lib/commissionAllocation";
+import { isAllocationRole, normalizeRoleName, type AllocationPerson } from "@/lib/elifeAllocation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, RefreshCw, Wallet } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
-interface Row {
-  community_id: string;
-  community_name: string;
-  creator_user_id: string;
-  creator_name: string | null;
-  profit: number;
-  rate: number;
-}
-interface Props { rules: Record<string, CommissionRule>; fallbackRate: number; ready: boolean }
-const money = (n: number) => `₹${Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const db = supabase as unknown as { from: (t: string) => any; rpc: (fn: string, a?: Record<string, unknown>) => any; functions: typeof supabase.functions };
 
-export default function CommunityCommissionTable({ rules, fallbackRate, ready }: Props) {
+interface SavedRow {
+  id: string; community_id: string; community_name: string; customer_user_id: string | null;
+  recipient_type: string; recipient_name: string | null; recipient_mobile: string | null;
+  total_profit: number; commission_rate: number; calculated_commission: number; amount: number;
+  share_count: number; status: "pending" | "verified" | "allocated"; allocated_at: string | null; created_at: string;
+}
+interface Props { roles?: { id: string; name: string }[]; rules: Record<string, CommissionRule>; fallbackRate: number; ready: boolean }
+const money = (n: number) => `₹${Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const TYPE_LABEL: Record<string, string> = { creator: "Creator", coordinator: "Coordinator", team_leader: "Team leader", super_admin: "Super admin" };
+const TYPE_ORDER = ["creator", "coordinator", "team_leader", "super_admin"];
+
+export default function CommunityCommissionTable({ roles = [], rules, fallbackRate, ready }: Props) {
   const today = commissionDate();
   const [from, setFrom] = useState(`${today.slice(0, 7)}-01`);
   const [to, setTo] = useState(today);
-  const [rows, setRows] = useState<Row[]>([]);
-  const [payments, setPayments] = useState<CommissionPayment[]>([]);
+  const [rows, setRows] = useState<SavedRow[]>([]);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<Row | null>(null);
-  const [allocating, setAllocating] = useState(false);
+  const [confirm, setConfirm] = useState<SavedRow | null>(null);
   const validPeriod = !!from && !!to && from <= to && to <= today;
 
   const load = useCallback(async () => {
-    if (!ready || !from || !to || from > to || to > commissionDate()) { setLoading(false); return; }
-    setLoading(true);
-    setError(null);
-    setEdits({});
+    if (!ready || !validPeriod) { setLoading(false); return; }
+    setLoading(true); setError(null); setEdits({});
+    const { data, error } = await db.from("community_commission_allocations").select("*")
+      .lte("period_from", to).gte("period_to", from).order("created_at", { ascending: false });
+    if (error) setError(error.message);
+    else setRows(((data ?? []) as SavedRow[]).filter(r => r.status === "allocated" || (r.period_from === from && r.period_to === to) as unknown as boolean));
+    setLoading(false);
+  }, [from, to, ready, validPeriod]);
+  useEffect(() => { void load(); }, [load]);
+
+  const roleId = (name: string) => roles.find(r => normalizeRoleName(r.name) === normalizeRoleName(name))?.id ?? null;
+
+  /** Calculate creator + hierarchy shares for the period and save them as pending rows. */
+  const calculate = async () => {
+    setBusy(true); setError(null);
     try {
       const range = commissionRange(from, to);
-      const [summary, ledger] = await Promise.all([
-        supabase.rpc("get_community_revenue_summary", { _from: range.from, _to: range.to }),
-        supabase.from("community_commission_allocations").select("*").lte("period_from", to).gte("period_to", from).order("created_at", { ascending: false }),
-      ]);
+      const summary = await db.rpc("get_community_revenue_summary", { _from: range.from, _to: range.to });
       if (summary.error) throw summary.error;
-      if (ledger.error) throw ledger.error;
-      const ids = [...new Set((summary.data ?? []).map(r => r.creator_user_id))];
+      const list = (summary.data ?? []) as Record<string, any>[];
+      const ids = [...new Set(list.map(r => r.creator_user_id).filter(Boolean))];
       const [profiles, assigned] = ids.length ? await Promise.all([
-        supabase.from("profiles").select("user_id, role_id").in("user_id", ids),
-        supabase.from("user_roles").select("user_id, role_id, created_at").in("user_id", ids).order("created_at", { ascending: false }),
-      ]) : [{ data: [], error: null }, { data: [], error: null }];
-      if (profiles.error) throw profiles.error;
-      if (assigned.error) throw assigned.error;
-      const roleFor = (id: string) => assigned.data?.find(p => p.user_id === id)?.role_id ?? profiles.data?.find(p => p.user_id === id)?.role_id ?? null;
-      setRows((summary.data ?? []).map(r => ({ ...r, profit: Number(r.profit), rate: commissionRateForRole(roleFor(r.creator_user_id), rules, fallbackRate) })));
-      setPayments((ledger.data ?? []) as CommissionPayment[]);
-    } catch (e) { setError((e as { message?: string }).message || "Could not load commission allocations"); }
-    finally { setLoading(false); }
-  }, [from, to, rules, fallbackRate, ready]);
+        db.from("profiles").select("user_id, role_id, local_body_id, ward_number").in("user_id", ids),
+        db.from("user_roles").select("user_id, role_id, created_at").in("user_id", ids).order("created_at", { ascending: false }),
+      ]) : [{ data: [] }, { data: [] }];
+      const prof = new Map(((profiles.data ?? []) as any[]).map(p => [p.user_id, p]));
+      const bodyIds = [...new Set(((profiles.data ?? []) as any[]).map(p => p.local_body_id).filter(Boolean))];
+      const bodies = bodyIds.length ? await db.from("locations_local_bodies").select("id, name").in("id", bodyIds) : { data: [] };
+      const bodyName = new Map(((bodies.data ?? []) as any[]).map(b => [b.id, b.name]));
+      const roleOf = (id: string) => (assigned.data as any[])?.find(a => a.user_id === id)?.role_id ?? prof.get(id)?.role_id ?? null;
 
-  useEffect(() => { void load(); }, [load]);
-  const amountFor = (row: Row) => edits[row.community_id] === undefined ? commissionAmount(row.profit, row.rate) : Number(edits[row.community_id]);
+      const communities: AreaCommunity[] = list.map(r => ({
+        community_id: r.community_id, community_name: r.community_name, creator_name: r.creator_name ?? null,
+        local_body_name: bodyName.get(prof.get(r.creator_user_id)?.local_body_id) ?? null,
+        ward_number: prof.get(r.creator_user_id)?.ward_number ?? null,
+        member_count: Number(r.member_count) || 0, order_count: Number(r.order_count) || 0,
+        revenue: Number(r.revenue) || 0, profit: Number(r.profit) || 0,
+      }));
+      const creatorRows: PayoutRow[] = list.filter(r => Number(r.profit) > 0).map(r => {
+        const rate = commissionRateForRole(roleOf(r.creator_user_id), rules, fallbackRate);
+        return { community_id: r.community_id, community_name: r.community_name, recipient_type: "creator",
+          recipient_name: r.creator_name ?? null, recipient_mobile: r.creator_mobile ?? null, elife_person_id: null,
+          customer_user_id: r.creator_user_id, total_profit: Number(r.profit), commission_rate: rate, share_count: 1,
+          calculated_commission: commissionAmount(Number(r.profit), rate) };
+      });
+
+      const { data: el, error: fnError } = await supabase.functions.invoke("elife-role-allocations");
+      if (fnError || el?.error) throw new Error(el?.error || "Could not reach e-Life");
+      const people = ((el?.people ?? []) as AllocationPerson[]).filter(p => isAllocationRole(p.role) && p.is_active !== false);
+      const hierarchy = buildHierarchyRows(people, communities, role => commissionRateForRole(roleId(role), rules, fallbackRate));
+
+      const { error: saveError } = await db.rpc("save_commission_allocation_rows", { _from: from, _to: to, _rows: [...creatorRows, ...hierarchy] });
+      if (saveError) throw saveError;
+      toast.success("Allocation table saved — verify rows before allocating");
+      await load();
+    } catch (e) { setError((e as { message?: string }).message || "Could not calculate allocations"); }
+    setBusy(false);
+  };
+
+  const amountOf = (r: SavedRow) => edits[r.id] === undefined ? Number(r.amount) : Number(edits[r.id]);
+  const verify = async (r: SavedRow) => {
+    setBusy(true);
+    const { error } = await db.rpc("verify_commission_allocation", { _id: r.id, _amount: amountOf(r) });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Verified"); await load();
+  };
   const allocate = async () => {
     if (!confirm) return;
-    const amount = amountFor(confirm);
-    if (!Number.isFinite(amount) || amount <= 0 || !validPeriod) return;
-    setAllocating(true);
-    const { error } = await supabase.rpc("allocate_community_commission", { _community_id: confirm.community_id, _from: from, _to: to, _amount: amount });
-    setAllocating(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Sales commission credited to the creator's wallet");
-    setConfirm(null);
-    await load();
+    setBusy(true);
+    const { error } = await db.rpc("allocate_commission_row", { _id: confirm.id });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Sales commission credited to wallet");
+    setConfirm(null); await load();
   };
+
+  const sorted = [...rows].sort((a, b) => a.community_name.localeCompare(b.community_name) || TYPE_ORDER.indexOf(a.recipient_type) - TYPE_ORDER.indexOf(b.recipient_type));
 
   return (
     <section className="space-y-4 border-b pb-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Allocation table</h2>
-        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading || !ready || !validPeriod}><RefreshCw className="mr-2 h-4 w-4" />Refresh table</Button>
+        <div><h2 className="text-lg font-semibold">Allocation table</h2>
+          <p className="text-xs text-muted-foreground">Community profit shared to creator, coordinator (wards), team leader and super admin (panchayaths). Sales outside communities are not shared.</p></div>
+        <Button size="sm" onClick={() => void calculate()} disabled={busy || !ready || !validPeriod}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Calculate &amp; save</Button>
       </div>
       <div className="flex flex-wrap gap-3">
-        <div className="space-y-1"><Label htmlFor="allocation-from">Period from</Label><Input id="allocation-from" type="date" value={from} max={to || today} onChange={e => setFrom(e.target.value)} disabled={allocating} /></div>
-        <div className="space-y-1"><Label htmlFor="allocation-to">Period to</Label><Input id="allocation-to" type="date" value={to} min={from} max={today} onChange={e => setTo(e.target.value)} disabled={allocating} /></div>
+        <div className="space-y-1"><Label htmlFor="allocation-from">Period from</Label><Input id="allocation-from" type="date" value={from} max={to || today} onChange={e => setFrom(e.target.value)} disabled={busy} /></div>
+        <div className="space-y-1"><Label htmlFor="allocation-to">Period to</Label><Input id="allocation-to" type="date" value={to} min={from} max={today} onChange={e => setTo(e.target.value)} disabled={busy} /></div>
       </div>
       {!validPeriod && <p className="text-sm text-destructive">Choose a valid period ending today or earlier.</p>}
-      {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : loading ? <Loader2 aria-label="Loading allocation table" className="h-5 w-5 animate-spin" /> : validPeriod && (
-        <Table>
-          <TableHeader><TableRow><TableHead>Community / recipient</TableHead><TableHead className="text-right">Total profit</TableHead><TableHead className="text-right">Role rate</TableHead><TableHead className="text-right">Calculated</TableHead><TableHead>Commission (₹)</TableHead><TableHead>Status / date</TableHead><TableHead /></TableRow></TableHeader>
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {loading ? <Loader2 aria-label="Loading allocation table" className="h-5 w-5 animate-spin" /> : validPeriod && (
+        <div className="overflow-x-auto"><Table>
+          <TableHeader><TableRow><TableHead>Community</TableHead><TableHead>Recipient</TableHead><TableHead className="text-right">Profit</TableHead><TableHead className="text-right">Rate</TableHead><TableHead className="text-right">Calculated</TableHead><TableHead>Commission (₹)</TableHead><TableHead>Status</TableHead><TableHead /></TableRow></TableHeader>
           <TableBody>
-            {rows.map(row => {
-              const paid = payments.find(p => p.community_id === row.community_id && overlapsCommissionPeriod(p, from, to));
-              const amount = amountFor(row);
-              return <TableRow key={row.community_id}>
-                <TableCell><p className="font-medium">{row.community_name}</p><p className="text-xs text-muted-foreground">{row.creator_name || "Community creator"}</p></TableCell>
-                <TableCell className="text-right">{money(row.profit)}</TableCell><TableCell className="text-right">{row.rate}%</TableCell><TableCell className="text-right">{money(commissionAmount(row.profit, row.rate))}</TableCell>
-                <TableCell><Input type="number" min="0.01" step="0.01" aria-label={`Commission for ${row.community_name}`} className="w-32" value={paid ? paid.amount : edits[row.community_id] ?? commissionAmount(row.profit, row.rate).toFixed(2)} onChange={e => setEdits(prev => ({ ...prev, [row.community_id]: e.target.value }))} disabled={!!paid || allocating} /></TableCell>
-                <TableCell>{paid ? <><Badge variant="secondary">Allocated {money(paid.amount)}</Badge><p className="mt-1 text-xs text-muted-foreground">{paid.period_from} – {paid.period_to}<br />{new Date(paid.created_at).toLocaleString("en-IN")}</p></> : <Badge variant="outline">Not allocated</Badge>}</TableCell>
-                <TableCell><Button size="sm" disabled={!!paid || allocating || !Number.isFinite(amount) || amount <= 0} onClick={() => setConfirm(row)}><Wallet className="mr-1 h-4 w-4" />Allocate</Button></TableCell>
+            {sorted.map(r => {
+              const done = r.status === "allocated";
+              const amount = amountOf(r);
+              return <TableRow key={r.id}>
+                <TableCell className="font-medium">{r.community_name}</TableCell>
+                <TableCell><Badge variant={r.recipient_type === "creator" ? "default" : "secondary"}>{TYPE_LABEL[r.recipient_type] ?? r.recipient_type}</Badge>
+                  <p className="text-xs mt-1">{r.recipient_name || "—"}{r.share_count > 1 ? ` · 1/${r.share_count} share` : ""}</p>
+                  {!r.customer_user_id && <p className="text-xs text-destructive">No account</p>}</TableCell>
+                <TableCell className="text-right">{money(r.total_profit)}</TableCell>
+                <TableCell className="text-right">{r.commission_rate}%</TableCell>
+                <TableCell className="text-right">{money(r.calculated_commission)}</TableCell>
+                <TableCell><Input type="number" min="0.01" step="0.01" aria-label={`Commission for ${r.recipient_name ?? r.community_name}`} className="w-28" value={edits[r.id] ?? Number(r.amount).toFixed(2)} onChange={e => setEdits(p => ({ ...p, [r.id]: e.target.value }))} disabled={done || busy} /></TableCell>
+                <TableCell>{done ? <><Badge variant="secondary">Allocated</Badge><p className="text-xs text-muted-foreground mt-1">{r.allocated_at && new Date(r.allocated_at).toLocaleString("en-IN")}</p></> : <Badge variant="outline">{r.status === "verified" ? "Verified" : "Pending verification"}</Badge>}</TableCell>
+                <TableCell className="space-x-1 whitespace-nowrap">{!done && <>
+                  <Button size="sm" variant="outline" disabled={busy || !(amount > 0)} onClick={() => void verify(r)}><CheckCircle2 className="mr-1 h-4 w-4" />Verify</Button>
+                  <Button size="sm" disabled={busy || r.status !== "verified" || !r.customer_user_id || edits[r.id] !== undefined} onClick={() => setConfirm(r)}><Wallet className="mr-1 h-4 w-4" />Allocate</Button>
+                </>}</TableCell>
               </TableRow>;
             })}
-            {rows.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">No communities found.</TableCell></TableRow>}
+            {sorted.length === 0 && <TableRow><TableCell colSpan={8} className="py-8 text-center text-muted-foreground">Nothing saved for this period. Click “Calculate &amp; save”.</TableCell></TableRow>}
           </TableBody>
-        </Table>
+        </Table></div>
       )}
-      <Dialog open={!!confirm} onOpenChange={open => { if (!open && !allocating) setConfirm(null); }}>
+      <Dialog open={!!confirm} onOpenChange={o => { if (!o && !busy) setConfirm(null); }}>
         <DialogContent><DialogHeader><DialogTitle>Allocate sales commission?</DialogTitle><DialogDescription>{confirm?.community_name} · {from} – {to}</DialogDescription></DialogHeader>
-          {confirm && <p className="text-sm">Credit <strong>{money(amountFor(confirm))}</strong> to {confirm.creator_name || "the community creator"}'s wallet?</p>}
-          <div className="flex justify-end gap-2"><Button variant="outline" disabled={allocating} onClick={() => setConfirm(null)}>Cancel</Button><Button disabled={allocating} onClick={() => void allocate()}>{allocating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Confirm allocation</Button></div>
+          {confirm && <p className="text-sm">Credit <strong>{money(confirm.amount)}</strong> to {confirm.recipient_name || "this person"} ({TYPE_LABEL[confirm.recipient_type]})'s wallet?</p>}
+          <div className="flex justify-end gap-2"><Button variant="outline" disabled={busy} onClick={() => setConfirm(null)}>Cancel</Button><Button disabled={busy} onClick={() => void allocate()}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Confirm allocation</Button></div>
         </DialogContent>
       </Dialog>
     </section>

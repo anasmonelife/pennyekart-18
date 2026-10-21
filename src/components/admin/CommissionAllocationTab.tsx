@@ -204,7 +204,7 @@ export default function CommissionAllocationTab({ roles, rules, fallbackRate, re
 
   return (
     <div className="space-y-4">
-      <CommunityCommissionTable rules={rules} fallbackRate={fallbackRate} ready={ready} />
+      <CommunityCommissionTable roles={roles} rules={rules} fallbackRate={fallbackRate} ready={ready} />
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 pb-3">
           <div>
