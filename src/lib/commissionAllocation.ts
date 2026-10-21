@@ -108,6 +108,19 @@ export const groupAllocationRows = <T extends { community_id: string; period_fro
     a.community_name.localeCompare(b.community_name) || (a.period_from < b.period_from ? -1 : 1));
 };
 
+export interface PayoutRow {
+  community_id: string;
+  community_name: string;
+  recipient_type: RecipientType;
+  recipient_name: string | null;
+  recipient_mobile: string | null;
+  elife_person_id: string | null;
+  customer_user_id: string | null;
+  total_profit: number;
+  commission_rate: number;
+  share_count: number;
+  calculated_commission: number;
+}
 
 const HIERARCHY: Record<string, RecipientType> = {
   coordinator: "coordinator", "team leader": "team_leader", "super admin": "super_admin",
