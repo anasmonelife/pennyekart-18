@@ -29,8 +29,8 @@ const payments = [
 describe("customer wallet sales commission tab", () => {
   it("lists allocated payouts with community, role, period and amount", async () => {
     mocks.from.mockImplementation((table: string) => mockQuery(table === "community_commission_allocations" ? payments : []));
-    render(<CustomerWallet />);
-    fireEvent.mouseDown(await screen.findByRole("tab", { name: /Sales commission/i })); fireEvent.click(await screen.findByRole("tab", { name: /Sales commission/i }));
+    render(<CustomerWallet />); console.log("rendered");
+    const tab = await screen.findByRole("tab", { name: /Sales commission/i }); console.log("tab found"); fireEvent.mouseDown(tab); console.log("mousedown done"); fireEvent.click(tab); console.log("click done");
     await waitFor(() => expect(screen.getByText("Kodur Circle")).toBeInTheDocument());
     expect(screen.getByText(/Creator/i)).toBeInTheDocument();
     expect(screen.getByText(/2026-09-01/i)).toBeInTheDocument();
@@ -40,8 +40,8 @@ describe("customer wallet sales commission tab", () => {
 
   it("shows the empty state when nothing has been allocated", async () => {
     mocks.from.mockImplementation(() => mockQuery([]));
-    render(<CustomerWallet />);
-    fireEvent.mouseDown(await screen.findByRole("tab", { name: /Sales commission/i })); fireEvent.click(await screen.findByRole("tab", { name: /Sales commission/i }));
+    render(<CustomerWallet />); console.log("rendered");
+    const tab = await screen.findByRole("tab", { name: /Sales commission/i }); console.log("tab found"); fireEvent.mouseDown(tab); console.log("mousedown done"); fireEvent.click(tab); console.log("click done");
     await waitFor(() => expect(screen.getByText("No sales commission yet")).toBeInTheDocument());
   });
 });
