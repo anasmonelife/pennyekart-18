@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import CommunityAccessRequests from "@/components/admin/CommunityAccessRequests";
 import CommissionAllocationTab from "@/components/admin/CommissionAllocationTab";
+import CommunityPayoutRequests from "@/components/admin/CommunityPayoutRequests";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -293,9 +294,13 @@ const CommunitiesPage = () => {
           <TabsList>
             <TabsTrigger value="communities">Communities</TabsTrigger>
             <TabsTrigger value="allocation">Commission allocation</TabsTrigger>
+            <TabsTrigger value="payouts">Payout requests</TabsTrigger>
           </TabsList>
           <TabsContent value="allocation">
             <CommissionAllocationTab roles={roles} rules={rules} fallbackRate={pct} ready={settingsLoaded && rolesLoaded} />
+          </TabsContent>
+          <TabsContent value="payouts">
+            <CommunityPayoutRequests ready={settingsLoaded && rolesLoaded} />
           </TabsContent>
           <TabsContent value="communities" className="space-y-6">
 

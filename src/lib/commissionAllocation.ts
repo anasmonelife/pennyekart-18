@@ -74,6 +74,40 @@ export const periodRange = (period: AllocationPeriod, now = new Date()) => {
 };
 
 export type RecipientType = "creator" | "coordinator" | "team_leader" | "super_admin";
+/** Creator first, then the hierarchy roles — the order allocation rows are shown in. */
+export const RECIPIENT_TYPE_ORDER: RecipientType[] = ["creator", "coordinator", "team_leader", "super_admin"];
+
+export interface AllocationRowGroup<T> {
+  community_id: string;
+  community_name: string;
+  period_from: string;
+  period_to: string;
+  rows: T[];
+}
+
+/** All allocations of one community for one period share a single table row. */
+export const groupAllocationRows = <T extends { community_id: string; community_name?: string; period_from: string; period_to: string; recipient_type?: string }>(
+  rows: T[],
+): AllocationRowGroup<T>[] => {
+  const map = new Map<string, AllocationRowGroup<T>>();
+  for (const r of rows) {
+    const key = `${r.community_id}|${r.period_from}|${r.period_to}`;
+    let g = map.get(key);
+    if (!g) {
+      g = { community_id: r.community_id, community_name: r.community_name ?? r.community_id, period_from: r.period_from, period_to: r.period_to, rows: [] };
+      map.set(key, g);
+    }
+    g.rows.push(r);
+  }
+  const typeRank = (t?: string) => {
+    const i = RECIPIENT_TYPE_ORDER.indexOf((t ?? "") as RecipientType);
+    return i < 0 ? RECIPIENT_TYPE_ORDER.length : i;
+  };
+  for (const g of map.values()) g.rows.sort((a, b) => typeRank(a.recipient_type) - typeRank(b.recipient_type));
+  return [...map.values()].sort((a, b) =>
+    a.community_name.localeCompare(b.community_name) || (a.period_from < b.period_from ? -1 : 1));
+};
+
 export interface PayoutRow {
   community_id: string;
   community_name: string;
