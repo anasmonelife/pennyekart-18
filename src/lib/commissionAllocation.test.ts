@@ -42,3 +42,21 @@ describe("commission allocation by area", () => {
     expect(periodRange("this_month", new Date(2026, 9, 20)).key).toBe("2026-10");
   });
 });
+
+describe("hierarchy commission rows", () => {
+  it("splits a role's share equally and limits coordinators to their wards", async () => {
+    const { buildHierarchyRows } = await import("./commissionAllocation");
+    const rows = buildHierarchyRows([
+      person("coordinator", ["Pandikkad"], ["7"]),
+      { ...person("team_leader", ["Pandikkad"]), id: "tl1" },
+      { ...person("team_leader", ["Pandikkad"]), id: "tl2" },
+      person("pro", ["Pandikkad"]),
+    ], communities, () => 10);
+    const coord = rows.filter((r) => r.recipient_type === "coordinator");
+    expect(coord.map((r) => r.community_id)).toEqual(["A"]);
+    expect(coord[0].calculated_commission).toBe(10);
+    const tlA = rows.filter((r) => r.recipient_type === "team_leader" && r.community_id === "A");
+    expect(tlA.map((r) => r.calculated_commission)).toEqual([5, 5]);
+    expect(rows.some((r) => r.community_id === "C")).toBe(false);
+  });
+});
