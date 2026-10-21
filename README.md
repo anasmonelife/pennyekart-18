@@ -71,68 +71,9 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
-30/06/26 order popup on pennyekart
-30/06/26 dashboard click open farmelife
-07/08/26 pennyekart
-08/08/26 farmelife
-10/08/26 pennyekart
-10/08/26 organelife
-11/08/26 backoffice
-30/08/26 pennyekart
-30/08/26 backoffice
-30/08/26 organelife
-30/08/26 farmelife 
-18/09/26 pennyekart
-24/09/26 pennyekart
-24/09/226 back office
-24/09/26 organelife 
-25/09/26 laundry
-25/09/26 organ
-25/09/26 penny
-25/09/26 backoffice
-25/09/26 samrabhaka
-26/29/26 barcode
-27/09/26 samrambhaka
-27/09/26 office
-28/09/ organelife
-28/09/26 office
-2/10/26 pennykrt
-2/10/26 backoffice
-2/10/26 organelife
-3/10/26 samrambhaka
-3/10/26 ORGANELIFE
-3/10/26 office
-3/10/26 barcode
-4/10/26 pennykart
-4/10/26 backoffice
-4/10/26 organ
-05/10/26 pennykrt
-05/10/26 back office
-05/10/26 barcod
-06/10/26 pennykrt
-06/10/26 samrambhaka
-06/10/26 barcod
-07/10/26 pennyekart
-07/10/26 back office 
-07/10/26 samrambhaka 08/10
-08/10/26 back office2times
-08/10/26 ORGANELIFE
-0/10/26 cloud kitchen
-09/10/26 anasmon
-09/10/26 temeelife
-09/10/26 organ
-09/10/26 laundry girl
-10/10/26 samrambhaka
-10/10/26 laundry
-10/10/26 organ
-11-10-26 team elife
-15-10-26 10/10/26 organ
-15-10-26 team elife
-15/10/26 laundry
-17/10/26 anasmon kk
-17/10/26 cloud shelf REN
+
 19/10/26 agents 3
 20/10/26 evaselfie
 20/10-26 anasmonelife
 20/10/26 anasmonelife 6
-
+21/10/26 cloud shelf
