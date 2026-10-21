@@ -20,7 +20,7 @@ interface SavedRow {
   id: string; community_id: string; community_name: string; customer_user_id: string | null;
   recipient_type: string; recipient_name: string | null; recipient_mobile: string | null;
   total_profit: number; commission_rate: number; calculated_commission: number; amount: number;
-  share_count: number; status: "pending" | "verified" | "allocated"; allocated_at: string | null; created_at: string;
+  share_count: number; period_from: string; period_to: string; status: "pending" | "verified" | "allocated"; allocated_at: string | null; created_at: string;
 }
 interface Props { roles?: { id: string; name: string }[]; rules: Record<string, CommissionRule>; fallbackRate: number; ready: boolean }
 const money = (n: number) => `₹${Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -45,7 +45,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
     const { data, error } = await db.from("community_commission_allocations").select("*")
       .lte("period_from", to).gte("period_to", from).order("created_at", { ascending: false });
     if (error) setError(error.message);
-    else setRows(((data ?? []) as SavedRow[]).filter(r => r.status === "allocated" || (r.period_from === from && r.period_to === to) as unknown as boolean));
+    else setRows(((data ?? []) as SavedRow[]).filter(r => r.status === "allocated" || (r.period_from === from && r.period_to === to)));
     setLoading(false);
   }, [from, to, ready, validPeriod]);
   useEffect(() => { void load(); }, [load]);
