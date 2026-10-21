@@ -2,8 +2,9 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ from: vi.fn() }));
+const fakeUser = { id: "user-1" };
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: mocks.from } }));
-vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: { id: "user-1" }, loading: false }) }));
+vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: fakeUser, loading: false }) }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
 
 import CustomerWallet from "./Wallet";
