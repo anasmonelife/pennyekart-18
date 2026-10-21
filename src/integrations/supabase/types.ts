@@ -397,52 +397,76 @@ export type Database = {
       }
       community_commission_allocations: {
         Row: {
-          allocated_by: string
+          allocated_at: string | null
+          allocated_by: string | null
           amount: number
           calculated_commission: number
           commission_rate: number
           community_id: string
           community_name: string
           created_at: string
-          customer_user_id: string
+          customer_user_id: string | null
+          elife_person_id: string | null
           id: string
           period_from: string
           period_to: string
+          recipient_mobile: string | null
+          recipient_name: string | null
+          recipient_type: string
+          share_count: number
+          status: string
           total_profit: number
           updated_at: string
-          wallet_transaction_id: string
+          verified_at: string | null
+          wallet_transaction_id: string | null
         }
         Insert: {
-          allocated_by: string
+          allocated_at?: string | null
+          allocated_by?: string | null
           amount: number
           calculated_commission: number
           commission_rate: number
           community_id: string
           community_name: string
           created_at?: string
-          customer_user_id: string
+          customer_user_id?: string | null
+          elife_person_id?: string | null
           id?: string
           period_from: string
           period_to: string
+          recipient_mobile?: string | null
+          recipient_name?: string | null
+          recipient_type?: string
+          share_count?: number
+          status?: string
           total_profit: number
           updated_at?: string
-          wallet_transaction_id: string
+          verified_at?: string | null
+          wallet_transaction_id?: string | null
         }
         Update: {
-          allocated_by?: string
+          allocated_at?: string | null
+          allocated_by?: string | null
           amount?: number
           calculated_commission?: number
           commission_rate?: number
           community_id?: string
           community_name?: string
           created_at?: string
-          customer_user_id?: string
+          customer_user_id?: string | null
+          elife_person_id?: string | null
           id?: string
           period_from?: string
           period_to?: string
+          recipient_mobile?: string | null
+          recipient_name?: string | null
+          recipient_type?: string
+          share_count?: number
+          status?: string
           total_profit?: number
           updated_at?: string
-          wallet_transaction_id?: string
+          verified_at?: string | null
+          wallet_transaction_id?: string | null
         }
         Relationships: [
           {
@@ -2919,15 +2943,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      allocate_community_commission: {
-        Args: {
-          _amount?: number
-          _community_id: string
-          _from: string
-          _to: string
-        }
-        Returns: string
-      }
+      allocate_commission_row: { Args: { _id: string }; Returns: string }
       am_i_verified: { Args: never; Returns: boolean }
       anonymize_user_data: { Args: { _uid: string }; Returns: undefined }
       auto_cancel_stale_utility_requests: { Args: never; Returns: number }
@@ -3090,7 +3106,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      save_commission_allocation_rows: {
+        Args: { _from: string; _rows: Json; _to: string }
+        Returns: number
+      }
       start_account_verification: { Args: never; Returns: string }
+      verify_commission_allocation: {
+        Args: { _amount: number; _id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
