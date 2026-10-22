@@ -25,12 +25,21 @@ const STATUS_LABEL: Record<string, string> = { pending: "Pending", verified: "Ve
 
 /** Admin review of customer sales-commission payout requests: verify, approve (pays wallet), or reject. */
 export default function CommunityPayoutRequests({ ready }: { ready: boolean }) {
+  type StatusTab = "pending" | "verified" | "approved" | "rejected";
+  const [tab, setTab] = useState<StatusTab>("pending");
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<Row | null>(null);
   const [notes, setNotes] = useState("");
+
+  const counts = useMemo(() => {
+    const base: Record<StatusTab, number> = { pending: 0, verified: 0, approved: 0, rejected: 0 };
+    for (const r of rows) if (r.status in base) base[r.status as StatusTab] += 1;
+    return base;
+  }, [rows]);
+  const visible = useMemo(() => rows.filter(r => r.status === tab), [rows, tab]);
 
   const load = useCallback(async () => {
     if (!ready) { setLoading(false); return; }
