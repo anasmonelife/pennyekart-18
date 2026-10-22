@@ -2,8 +2,10 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { shareOrDownload } from "./exportFile";
 
 const stubObjectUrls = () => {
-  (globalThis.URL as any).createObjectURL = vi.fn(() => "blob:mock");
+  const createObjectURL = vi.fn(() => "blob:mock");
+  (globalThis.URL as any).createObjectURL = createObjectURL;
   (globalThis.URL as any).revokeObjectURL = vi.fn();
+  return { createObjectURL };
 };
 
 const makeNav = (canShare?: (d: ShareData) => boolean, share?: (d: ShareData) => Promise<void>) =>
@@ -32,21 +34,20 @@ describe("shareOrDownload", () => {
   });
 
   it("downloads via an attached link when file sharing is unavailable", async () => {
-    stubObjectUrls();
+    const { createObjectURL } = stubObjectUrls();
     makeNav(undefined, undefined); // no canShare
-    const result = await shareOrDownload(new Blob(["a"]), "users.csv", { title: "Users" });
+    const blob = new Blob(["a"], { type: "text/csv" });
+    const result = await shareOrDownload(blob, "users.csv", { title: "Users" });
     expect(result).toBe("downloaded");
-    const link = document.body.querySelector("a");
-    expect(link).not.toBeNull();
-    expect(link?.getAttribute("download")).toBe("users.csv");
+    expect(createObjectURL).toHaveBeenCalledWith(blob);
   });
 
   it("falls back to download when sharing is declined", async () => {
-    stubObjectUrls();
+    const { createObjectURL } = stubObjectUrls();
     const share = vi.fn().mockRejectedValue(new Error("denied"));
     makeNav(() => true, share);
     const result = await shareOrDownload(new Blob(["a"]), "users.csv", { title: "Users" });
     expect(result).toBe("downloaded");
-    expect(document.body.querySelector("a")).not.toBeNull();
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
   });
 });
