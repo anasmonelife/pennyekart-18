@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import CommunityAccessRequests from "@/components/admin/CommunityAccessRequests";
 import CommissionAllocationTab from "@/components/admin/CommissionAllocationTab";
@@ -13,12 +13,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Users, IndianRupee, TrendingUp, Percent, Download, Loader2, Crown, Save, Pencil, Trash2 } from "lucide-react";
+import { Users, IndianRupee, TrendingUp, Percent, Download, Loader2, Crown, Save, Pencil, Trash2, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { commissionForProfit, isValidCommissionRule, type CommissionRule } from "@/lib/communityCommission";
@@ -104,7 +101,7 @@ const CommunitiesPage = () => {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [rolesLoaded, setRolesLoaded] = useState(false);
 
-  const [detail, setDetail] = useState<SummaryRow | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [memberLoading, setMemberLoading] = useState(false);
 
@@ -232,8 +229,7 @@ const CommunitiesPage = () => {
     toast.success("Role commission rule removed");
   };
 
-  const openDetail = async (row: SummaryRow) => {
-    setDetail(row);
+  const loadMembers = async (row: SummaryRow) => {
     setMemberLoading(true);
     const { data, error } = await rpc("get_community_member_revenue", {
       _community_id: row.community_id,
@@ -250,6 +246,13 @@ const CommunitiesPage = () => {
     setMemberLoading(false);
   };
 
+  /** Collapse/expand a community row; members load the first time it is expanded. */
+  const toggleDetail = (row: SummaryRow) => {
+    if (expandedId === row.community_id) { setExpandedId(null); return; }
+    setExpandedId(row.community_id);
+    void loadMembers(row);
+  };
+
   const totals = useMemo(() => {
     const revenue = rows.reduce((s, r) => s + r.revenue, 0);
     const profit = rows.reduce((s, r) => s + r.profit, 0);
@@ -259,8 +262,8 @@ const CommunitiesPage = () => {
     return { revenue, profit, memberCount, orderCount, commission };
   }, [rows, pct, rules]);
 
-  const exportMembers = () => {
-    if (!detail) return;
+  const exportMembers = (row: SummaryRow) => {
+
     const header = ["Member", "Mobile", "Role", "Orders", "Revenue", "Cost", "Profit"];
     const lines = members.map((m) => [
       m.full_name || "Member",
@@ -275,7 +278,7 @@ const CommunitiesPage = () => {
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${detail.community_name}-members.csv`;
+    a.download = `${row.community_name}-members.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -459,8 +462,11 @@ const CommunitiesPage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rows.map((r) => (
-                      <TableRow key={r.community_id}>
+                    {rows.map((r) => {
+                      const expanded = expandedId === r.community_id;
+                      return (
+                      <Fragment key={r.community_id}>
+                      <TableRow>
                         <TableCell className="font-medium">{r.community_name}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1 text-sm">
