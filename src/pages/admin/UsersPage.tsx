@@ -14,7 +14,9 @@ import CustomerList from "@/components/admin/CustomerList";
 import AddAdminDialog from "@/components/admin/AddAdminDialog";
 import ElifeRoleSyncButton from "@/components/admin/ElifeRoleSyncButton";
 import AdminsPanel, { isAddedAdmin } from "@/components/admin/AdminsPanel";
-import { Search, ChevronLeft, ChevronRight, ChevronDown, SlidersHorizontal, MoreHorizontal, Pencil, Trash2, KeyRound, Download } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ChevronDown, SlidersHorizontal, MoreHorizontal, Pencil, Trash2, KeyRound, Download, FileText, MessageCircle } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -481,6 +483,12 @@ const UsersPage = () => {
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={exportCsv}>
             <Download className="mr-1.5 h-4 w-4" /> <span className="hidden sm:inline">Export </span>CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportPdf}>
+            <FileText className="mr-1.5 h-4 w-4" /> <span className="hidden sm:inline">Export </span>PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={shareWhatsApp}>
+            <MessageCircle className="mr-1.5 h-4 w-4" /> <span className="hidden sm:inline">WhatsApp</span>
           </Button>
           {isSuperAdmin && <ElifeRoleSyncButton onDone={fetchData} />}
           {isSuperAdmin && <AddAdminDialog roles={roles} onCreated={fetchData} />}
