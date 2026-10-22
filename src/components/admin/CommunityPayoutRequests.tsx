@@ -85,6 +85,13 @@ export default function CommunityPayoutRequests({ ready }: { ready: boolean }) {
         </Button>
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      <Tabs value={tab} onValueChange={v => setTab(v as StatusTab)}>
+        <TabsList>
+          {(["pending", "verified", "approved", "rejected"] as StatusTab[]).map(s => (
+            <TabsTrigger key={s} value={s} className="capitalize">{STATUS_LABEL[s]} ({counts[s]})</TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
       {loading ? <Loader2 aria-label="Loading payout requests" className="h-5 w-5 animate-spin" /> : (
         <div className="overflow-x-auto"><Table>
           <TableHeader><TableRow>
