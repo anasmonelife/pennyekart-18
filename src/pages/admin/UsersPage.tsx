@@ -430,11 +430,13 @@ const UsersPage = () => {
   };
 
   const shareWhatsApp = async () => {
+    const data = exportRowsData();
+    if (!data) return;
     const doc = buildPdf();
     if (!doc) return;
     const fileName = `users_${filterType}_${new Date().toISOString().slice(0, 10)}.pdf`;
     const label = filterType === "admins" ? "Admins" : USER_TYPE_LABELS[filterType] ?? filterType;
-    const text = `Pennyekart users report — ${label}: ${filteredUsers.length} users · ${new Date().toLocaleDateString()}`;
+    const text = `Pennyekart users report — ${label}: ${data.rows.length} users · ${new Date().toLocaleDateString()}`;
     const nav = navigator as any;
     try {
       if (typeof nav.canShare === "function") {
