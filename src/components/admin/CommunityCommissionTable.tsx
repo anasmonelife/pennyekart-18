@@ -35,6 +35,8 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<SavedRow | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "verified" | "allocated">("all");
   const validPeriod = !!from && !!to && from <= to && to <= today;
 
   const load = useCallback(async () => {
