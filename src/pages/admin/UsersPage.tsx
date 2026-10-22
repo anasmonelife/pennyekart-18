@@ -356,45 +356,106 @@ const UsersPage = () => {
     }
   };
 
-  const exportCsv = () => {
+  const exportRowsData = () => {
     const rows = filterType === "admins" ? users.filter(isAddedAdmin) : filteredUsers;
     if (rows.length === 0) {
       toast({ title: "Nothing to export", description: "No users match the current filters." });
-      return;
+      return null;
     }
     const roleName = (id: string | null) => (id ? roles.find((r) => r.id === id)?.name ?? "" : "");
-    const esc = (v: unknown) => {
-      const s = v == null ? "" : String(v);
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
     const headers = [
       "Name", "Customer ID", "Email", "Mobile", "User Type", "Seller Type",
       "District", "Local Body", "Ward", "Approved", "Blocked", "Role",
       "Orders", "Total Spent", "Wallet Balance", "Joined On", "Last Login",
     ];
-    const lines = rows.map((u) => {
+    const body = rows.map((u) => {
       const o = orderSummaries.get(u.user_id);
       const w = walletSummaries.get(u.user_id);
       return [
-        u.full_name, u.customer_id, u.email, u.mobile_number,
+        u.full_name ?? "", u.customer_id ?? "", u.email ?? "", u.mobile_number ?? "",
         USER_TYPE_LABELS[u.user_type] ?? u.user_type,
         u.user_type === "selling_partner" ? (u.seller_type === "utility" ? "Utility Seller" : "Normal Seller") : "",
-        u.district_name, u.local_body_name, u.ward_number,
+        u.district_name ?? "", u.local_body_name ?? "", u.ward_number ?? "",
         u.is_approved ? "Yes" : "No", u.is_blocked ? "Yes" : "No", roleName(u.role_id),
         o?.order_count ?? 0, o?.total_spent ?? 0, w?.balance ?? 0,
         u.created_at ? new Date(u.created_at).toLocaleString() : "",
         u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "",
-      ].map(esc).join(",");
+      ];
     });
-    const csv = "\uFEFF" + [headers.join(","), ...lines].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    return { rows, headers, body };
+  };
+
+  const esc = (v: unknown) => {
+    const s = v == null ? "" : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const buildPdf = () => {
+    const data = exportRowsData();
+    if (!data) return null;
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    doc.setFontSize(14);
+    doc.text("Pennyekart — Users Report", 14, 14);
+    doc.setFontSize(9);
+    const label = filterType === "admins" ? "Admins" : USER_TYPE_LABELS[filterType] ?? filterType;
+    const filterParts = [
+      filterRole !== "all" ? `Role: ${filterRole === "none" ? "None" : roles.find((r) => r.id === filterRole)?.name ?? filterRole}` : "",
+      filterApproval !== "all" ? `Approval: ${filterApproval}` : "",
+      filterBlocked !== "all" ? `Status: ${filterBlocked}` : "",
+      filterDistrict !== "all" ? `District: ${filterDistrict}` : "",
+      filterLocalBody !== "all" ? `Local body: ${localBodies.find((l) => l.id === filterLocalBody)?.name ?? filterLocalBody}` : "",
+      filterWard !== "all" ? `Ward: ${filterWard}` : "",
+      filterSellerType !== "all" ? `Seller type: ${filterSellerType}` : "",
+      searchQuery.trim() ? `Search: "${searchQuery.trim()}"` : "",
+    ].filter(Boolean).join(" | ");
+    doc.text(`${label}: ${data.rows.length} users · Generated ${new Date().toLocaleString()}`, 14, 21);
+    if (filterParts) doc.text(filterParts, 14, 27);
+    autoTable(doc, {
+      head: [data.headers],
+      body: data.body,
+      startY: filterParts ? 31 : 25,
+      styles: { fontSize: 6.5, cellPadding: 1 },
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+    return doc;
+  };
+
+  const exportPdf = () => {
+    const doc = buildPdf();
+    if (!doc) return;
+    doc.save(`users_${filterType}_${new Date().toISOString().slice(0, 10)}.pdf`);
+    toast({ title: "Export ready", description: "Users exported to PDF." });
+  };
+
+  const shareWhatsApp = async () => {
+    const doc = buildPdf();
+    if (!doc) return;
+    const fileName = `users_${filterType}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    const label = filterType === "admins" ? "Admins" : USER_TYPE_LABELS[filterType] ?? filterType;
+    const text = `Pennyekart users report — ${label}: ${filteredUsers.length} users · ${new Date().toLocaleDateString()}`;
+    const nav = navigator as any;
+    try {
+      if (typeof nav.canShare === "function") {
+        const file = new File([doc.output("blob")], fileName, { type: "application/pdf" });
+        if (nav.canShare({ files: [file] })) {
+          await nav.share({ files: [file], text, title: "Users report" });
+          return;
+        }
+      }
+    } catch (e: any) {
+      if (e?.name === "AbortError") return; // user closed the share sheet
+      toast({ title: "Could not open share", description: e?.message ?? "", variant: "destructive" });
+    }
+    // Fallback: download the PDF and open WhatsApp with a summary message.
+    const blob = doc.output("blob");
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `users_${filterType}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
-    toast({ title: "Export ready", description: `${rows.length} users exported to CSV.` });
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+    toast({ title: "PDF downloaded", description: "Open WhatsApp and attach the downloaded file." });
   };
 
 
