@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { shareOrDownload } from "./exportFile";
 
+const stubObjectUrls = () => {
+  (globalThis.URL as any).createObjectURL = vi.fn(() => "blob:mock");
+  (globalThis.URL as any).revokeObjectURL = vi.fn();
+};
+
 const makeNav = (canShare?: (d: ShareData) => boolean, share?: (d: ShareData) => Promise<void>) =>
   vi.stubGlobal("navigator", { canShare, share });
 
