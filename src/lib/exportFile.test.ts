@@ -86,7 +86,7 @@ describe("shareOrDownload", () => {
     const args = vi.mocked(Filesystem.writeFile).mock.calls[0][0];
     expect(args.path).toBe("users_all_2026.csv");
     expect(args.directory).toBe(Directory.Cache);
-    expect(args.data.length).toBeGreaterThan(0);
+    expect(String(args.data).length).toBeGreaterThan(0);
     expect(Share.share).toHaveBeenCalledWith({
       title: "Users report",
       url: "file:///cache/users.csv",
