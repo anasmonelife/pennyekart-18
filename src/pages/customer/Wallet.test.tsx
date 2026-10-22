@@ -34,7 +34,7 @@ describe("customer wallet sales commission tab", () => {
     const tab = await screen.findByRole("tab", { name: /Sales commission/i }); fireEvent.mouseDown(tab); fireEvent.click(tab);
     await waitFor(() => expect(screen.getByText("Kodur Circle")).toBeInTheDocument());
     expect(screen.getByText(/Creator/i)).toBeInTheDocument();
-    expect(screen.getByText(/1 Sep 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/1 Sept 2026/)).toBeInTheDocument();
     expect(screen.getByText("+₹50.00")).toBeInTheDocument();
     expect(screen.getByText(/Paid /)).toBeInTheDocument();
   });
