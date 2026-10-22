@@ -487,12 +487,70 @@ const CommunitiesPage = () => {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="outline" onClick={() => openDetail(r)}>
-                            Details
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            aria-expanded={expanded}
+                            aria-label={expanded ? `Collapse ${r.community_name} details` : `Expand ${r.community_name} details`}
+                            onClick={() => toggleDetail(r)}
+                          >
+                            <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      {expanded && (
+                        <TableRow>
+                          <TableCell colSpan={9} className="bg-muted/30 p-0">
+                            <div className="space-y-3 p-3">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p className="text-sm">Creator commission ({communityRate(r)}%): <strong>{money(communityCommission(r))}</strong></p>
+                                <Button size="sm" variant="outline" className="gap-1" onClick={() => exportMembers(r)}>
+                                  <Download className="h-4 w-4" /> Export CSV
+                                </Button>
+                              </div>
+                              {memberLoading ? (
+                                <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
+                                  <Loader2 className="h-4 w-4 animate-spin" /> Loading members...
+                                </div>
+                              ) : members.length === 0 ? (
+                                <p className="py-6 text-center text-sm text-muted-foreground">No member activity in this period.</p>
+                              ) : (
+                                <div className="overflow-x-auto">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Member</TableHead>
+                                        <TableHead className="text-right">Orders</TableHead>
+                                        <TableHead className="text-right">Revenue</TableHead>
+                                        <TableHead className="text-right">Profit</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {members.map((m) => (
+                                        <TableRow key={m.user_id}>
+                                          <TableCell>
+                                            <p className="flex items-center gap-1 text-sm font-medium">
+                                              {m.full_name || "Member"}
+                                              {m.is_creator && <Crown className="h-3 w-3 text-primary" />}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">{m.mobile_number || "—"}</p>
+                                          </TableCell>
+                                          <TableCell className="text-right">{m.order_count}</TableCell>
+                                          <TableCell className="text-right">{money(m.revenue)}</TableCell>
+                                          <TableCell className="text-right">{money(m.profit)}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      </Fragment>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -503,61 +561,6 @@ const CommunitiesPage = () => {
         </Tabs>
       </div>
 
-      {/* Member detail */}
-      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{detail?.community_name} — members</DialogTitle>
-          </DialogHeader>
-          {detail && (
-            <div className="rounded-md border p-3">
-              <p className="text-xs text-muted-foreground">Creator commission · {communityRate(detail)}% of profit</p>
-              <p className="text-lg font-semibold">{money(communityCommission(detail))}</p>
-            </div>
-          )}
-          {memberLoading ? (
-            <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading members...
-            </div>
-          ) : (
-            <>
-              <div className="flex justify-end">
-                <Button size="sm" variant="outline" className="gap-1" onClick={exportMembers}>
-                  <Download className="h-4 w-4" /> Export CSV
-                </Button>
-              </div>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Member</TableHead>
-                      <TableHead className="text-right">Orders</TableHead>
-                      <TableHead className="text-right">Revenue</TableHead>
-                      <TableHead className="text-right">Profit</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {members.map((m) => (
-                      <TableRow key={m.user_id}>
-                        <TableCell>
-                          <p className="text-sm font-medium flex items-center gap-1">
-                            {m.full_name || "Member"}
-                            {m.is_creator && <Crown className="h-3 w-3 text-primary" />}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{m.mobile_number || "—"}</p>
-                        </TableCell>
-                        <TableCell className="text-right">{m.order_count}</TableCell>
-                        <TableCell className="text-right">{money(m.revenue)}</TableCell>
-                        <TableCell className="text-right">{money(m.profit)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </AdminLayout>
   );
 };
