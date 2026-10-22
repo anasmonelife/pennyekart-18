@@ -35,6 +35,8 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<SavedRow | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "verified" | "allocated">("all");
   const validPeriod = !!from && !!to && from <= to && to <= today;
 
   const load = useCallback(async () => {
@@ -116,7 +118,13 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
   };
 
   /** One row per community: creator + hierarchy allocations of the same period stay together. */
-  const groups = groupAllocationRows(rows);
+  const groups = groupAllocationRows(rows).filter(g => {
+    if (statusFilter !== "all" && !g.rows.some(r => r.status === statusFilter)) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return g.community_name.toLowerCase().includes(q)
+      || g.rows.some(r => (r.recipient_name ?? "").toLowerCase().includes(q) || (r.recipient_mobile ?? "").includes(q));
+  });
 
   const recipientLine = (r: SavedRow) => (
     <div key={`name-${r.id}`}>
@@ -156,6 +164,15 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
       <div className="flex flex-wrap gap-3">
         <div className="space-y-1"><Label htmlFor="allocation-from">Period from</Label><Input id="allocation-from" type="date" value={from} max={to || today} onChange={e => setFrom(e.target.value)} disabled={busy} /></div>
         <div className="space-y-1"><Label htmlFor="allocation-to">Period to</Label><Input id="allocation-to" type="date" value={to} min={from} max={today} onChange={e => setTo(e.target.value)} disabled={busy} /></div>
+        <div className="space-y-1 min-w-[220px] flex-1 max-w-xs"><Label htmlFor="allocation-search">Search</Label><Input id="allocation-search" placeholder="Community or recipient" value={search} onChange={e => setSearch(e.target.value)} /></div>
+        <div className="space-y-1"><Label htmlFor="allocation-status">Status</Label>
+          <select id="allocation-status" className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}>
+            <option value="all">All statuses</option>
+            <option value="pending">Pending verification</option>
+            <option value="verified">Verified</option>
+            <option value="allocated">Allocated</option>
+          </select>
+        </div>
       </div>
       {!validPeriod && <p className="text-sm text-destructive">Choose a valid period ending today or earlier.</p>}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
@@ -189,7 +206,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
                 <TableCell className="align-top">{g.rows.map(actionLine)}</TableCell>
               </TableRow>
             ))}
-            {groups.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Nothing saved for this period. Click “Calculate &amp; save”.</TableCell></TableRow>}
+            {groups.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">{rows.length > 0 ? "No rows match the current filters." : "Nothing saved for this period. Click “Calculate & save”."}</TableCell></TableRow>}
           </TableBody>
         </Table></div>
       )}

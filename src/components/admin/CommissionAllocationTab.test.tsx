@@ -1,11 +1,12 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ invoke: vi.fn(), from: vi.fn(), rpc: vi.fn(), inserted: vi.fn() }));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: { functions: { invoke: mocks.invoke }, from: mocks.from, rpc: mocks.rpc },
 }));
 import CommissionAllocationTab from "./CommissionAllocationTab";
 
+beforeEach(() => { mocks.invoke.mockClear(); mocks.from.mockClear(); mocks.rpc.mockClear(); mocks.inserted.mockClear(); });
 afterEach(cleanup);
 const person = (id: string, name: string, role: string, panchayaths: string[]) => ({
   id, source: "pennyekart_agents", name, mobile: "9000000000", role, ward: null, is_active: true,
@@ -14,11 +15,11 @@ const person = (id: string, name: string, role: string, panchayaths: string[]) =
 
 const mockQuery = (data: unknown) => {
   const query: Record<string, (...args: unknown[]) => unknown> = {};
-  for (const method of ["select", "eq", "order", "limit", "in"]) {
+  for (const method of ["select", "eq", "order", "limit", "in", "lte", "gte"]) {
     query[method] = () => query;
   }
   query.insert = (values: unknown) => { mocks.inserted(values); return query; };
-  query.maybeSingle = async () => ({ data, error: null });
+  query.maybeSingle = async () => ({ data: Array.isArray(data) && data.length === 0 ? null : data, error: null });
   query.then = (resolve: (result: unknown) => unknown) => Promise.resolve({ data, error: null }).then(resolve);
   return query;
 };

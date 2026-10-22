@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { payoutReviewActions } from "@/lib/commissionPayout";
@@ -24,12 +25,21 @@ const STATUS_LABEL: Record<string, string> = { pending: "Pending", verified: "Ve
 
 /** Admin review of customer sales-commission payout requests: verify, approve (pays wallet), or reject. */
 export default function CommunityPayoutRequests({ ready }: { ready: boolean }) {
+  type StatusTab = "pending" | "verified" | "approved" | "rejected";
+  const [tab, setTab] = useState<StatusTab>("pending");
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<Row | null>(null);
   const [notes, setNotes] = useState("");
+
+  const counts = useMemo(() => {
+    const base: Record<StatusTab, number> = { pending: 0, verified: 0, approved: 0, rejected: 0 };
+    for (const r of rows) if (r.status in base) base[r.status as StatusTab] += 1;
+    return base;
+  }, [rows]);
+  const visible = useMemo(() => rows.filter(r => r.status === tab), [rows, tab]);
 
   const load = useCallback(async () => {
     if (!ready) { setLoading(false); return; }
@@ -75,6 +85,13 @@ export default function CommunityPayoutRequests({ ready }: { ready: boolean }) {
         </Button>
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      <Tabs value={tab} onValueChange={v => setTab(v as StatusTab)}>
+        <TabsList>
+          {(["pending", "verified", "approved", "rejected"] as StatusTab[]).map(s => (
+            <TabsTrigger key={s} value={s} className="capitalize">{STATUS_LABEL[s]} ({counts[s]})</TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
       {loading ? <Loader2 aria-label="Loading payout requests" className="h-5 w-5 animate-spin" /> : (
         <div className="overflow-x-auto"><Table>
           <TableHeader><TableRow>
@@ -83,7 +100,7 @@ export default function CommunityPayoutRequests({ ready }: { ready: boolean }) {
             <TableHead>Requested on</TableHead><TableHead>Note</TableHead><TableHead />
           </TableRow></TableHeader>
           <TableBody>
-            {rows.map(r => (
+            {visible.map(r => (
               <TableRow key={r.id}>
                 <TableCell className="font-medium">{r.name || "—"}<p className="text-xs text-muted-foreground">{r.mobile || ""}</p></TableCell>
                 <TableCell className="text-right">{money(r.requested_amount)}</TableCell>
@@ -108,7 +125,7 @@ export default function CommunityPayoutRequests({ ready }: { ready: boolean }) {
                 </TableCell>
               </TableRow>
             ))}
-            {rows.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">No payout requests yet.</TableCell></TableRow>}
+            {visible.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">No {STATUS_LABEL[tab]?.toLowerCase()} payout requests.</TableCell></TableRow>}
           </TableBody>
         </Table></div>
       )}

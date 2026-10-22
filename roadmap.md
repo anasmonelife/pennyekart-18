@@ -113,4 +113,10 @@
 - [x] Customer sees "partner unavailable" notice; tests pass, build OK
 
 ## Community payout allocations in admin
-- [ ] Add payout management for community creators in /admin/communities and merge all allocations of one community into a single row.
+- [x] Add payout management for community creators in /admin/communities and merge all allocations of one community into a single row.
+
+## Community payouts & allocation table polish
+- [x] Payout requests review split into Pending / Verified / Approved / Rejected tabs with per-tab counts.
+- [x] Commission allocation table filters: search by community or recipient, and a status filter (all / pending / verified / allocated).
+- [x] Fix the two failing tests (wallet date format, allocation-tab mock missing lte/gte + mock call leakage) — full suite 69/69 passes; production build OK.
+- [ ] Verify the allocation-table collapse view on /admin/communities in a signed-in super admin session (blocked: external Supabase gives no test sign-in).
