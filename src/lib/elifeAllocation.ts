@@ -17,6 +17,7 @@ export const normalizeRoleName = (raw: string | null | undefined) =>
 
 /** Top-down hierarchy shown on the commission allocation tab: Super Admin down to Coordinator. */
 export const ALLOCATION_ROLE_ORDER = [
+  "super admin partner",
   "super admin",
   "admin",
   "state coordinator",
@@ -31,7 +32,7 @@ export const allocationRoleRank = (role: string) => {
   const i = (ALLOCATION_ROLE_ORDER as readonly string[]).indexOf(r);
   if (i >= 0) return i;
   // Other admin-level roles sit just below Admin
-  return r.includes("admin") ? 1.5 : -1;
+  return r.startsWith("super admin") ? 0 : r.includes("admin") ? 1.5 : -1;
 };
 
 /** Group Leader, Pro and other roles below Coordinator are excluded. */

@@ -18,10 +18,16 @@ describe("commission allocation roles", () => {
     expect(isAllocationRole("pro")).toBe(false);
   });
 
-  it("orders groups from Super Admin to Coordinator", () => {
+  it("orders groups from Super Admin Partner to Coordinator", () => {
     const groups = groupAllocationsByRole([
       person("coordinator"), person("pro"), person("team_leader"), person("super_admin"), person("admin"),
+      person("super_admin_partner"),
     ]);
-    expect(groups.map((g) => g.role)).toEqual(["super admin", "admin", "team leader", "coordinator"]);
+    expect(groups.map((g) => g.role)).toEqual(["super admin partner", "super admin", "admin", "team leader", "coordinator"]);
+  });
+
+  it("treats Super Admin Partner as an allocation role at the top of the hierarchy", () => {
+    expect(isAllocationRole("super_admin_partner")).toBe(true);
+    expect(isAllocationRole("Super Admin Partner")).toBe(true);
   });
 });

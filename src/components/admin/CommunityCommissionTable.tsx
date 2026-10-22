@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { commissionRateForRole, type CommissionRule } from "@/lib/communityCommission";
 import { commissionAmount, commissionDate, commissionRange } from "@/lib/commissionPayout";
-import { buildHierarchyRows, groupAllocationRows, type AreaCommunity, type PayoutRow } from "@/lib/commissionAllocation";
+import { buildHierarchyRows, groupAllocationRows, rateRoleName, type AreaCommunity, type PayoutRow } from "@/lib/commissionAllocation";
 import { isAllocationRole, normalizeRoleName, type AllocationPerson } from "@/lib/elifeAllocation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,7 @@ interface SavedRow {
 }
 interface Props { roles?: { id: string; name: string }[]; rules: Record<string, CommissionRule>; fallbackRate: number; ready: boolean }
 const money = (n: number) => `₹${Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const TYPE_LABEL: Record<string, string> = { creator: "Creator", coordinator: "Coordinator", team_leader: "Team leader", super_admin: "Super admin" };
+const TYPE_LABEL: Record<string, string> = { creator: "Creator", coordinator: "Coordinator", team_leader: "Team leader", super_admin: "Super admin partner" };
 
 export default function CommunityCommissionTable({ roles = [], rules, fallbackRate, ready }: Props) {
   const today = commissionDate();
@@ -87,7 +87,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
       const { data: el, error: fnError } = await supabase.functions.invoke("elife-role-allocations");
       if (fnError || el?.error) throw new Error(el?.error || "Could not reach e-Life");
       const people = ((el?.people ?? []) as AllocationPerson[]).filter(p => isAllocationRole(p.role) && p.is_active !== false);
-      const hierarchy = buildHierarchyRows(people, communities, role => commissionRateForRole(roleId(role), rules, fallbackRate));
+      const hierarchy = buildHierarchyRows(people, communities, role => commissionRateForRole(roleId(rateRoleName(role)), rules, fallbackRate));
 
       const { error: saveError } = await db.rpc("save_commission_allocation_rows", { _from: from, _to: to, _rows: [...creatorRows, ...hierarchy] });
       if (saveError) throw saveError;
@@ -150,7 +150,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
     <section className="space-y-4 border-b pb-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><h2 className="text-lg font-semibold">Allocation table</h2>
-          <p className="text-xs text-muted-foreground">Community profit shared to creator, coordinator (wards), team leader and super admin (panchayaths). Sales outside communities are not shared.</p></div>
+          <p className="text-xs text-muted-foreground">Community profit shared to creator, coordinator (wards), team leader and super admin partner (panchayaths). Sales outside communities are not shared.</p></div>
         <Button size="sm" onClick={() => void calculate()} disabled={busy || !ready || !validPeriod}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Calculate &amp; save</Button>
       </div>
       <div className="flex flex-wrap gap-3">
