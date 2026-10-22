@@ -122,14 +122,29 @@ export interface PayoutRow {
   calculated_commission: number;
 }
 
-const HIERARCHY: Record<string, RecipientType> = {
-  coordinator: "coordinator", "team leader": "team_leader", "super admin": "super_admin",
+const HIERARCHY: RecipientType[] = ["coordinator", "team_leader", "super_admin"];
+
+/** e-Life role name used for the rate lookup ("Super Admin Partner" maps to the "super admin" rule). */
+export const rateRoleName = (role: string) => {
+  const base = normalizeRoleName(role).replace(/\bpartner\b/g, "").replace(/\s+/g, " ").trim();
+  return base || normalizeRoleName(role);
+};
+
+/** Coordinators cover wards; team leaders and super admin partners cover their allocated panchayaths. */
+const hierarchyTypeForRole = (role: string): RecipientType | null => {
+  const r = normalizeRoleName(role);
+  if (r.includes("super admin")) return "super_admin";
+  if (r === "team leader") return "team_leader";
+  if (r === "coordinator") return "coordinator";
+  return null;
 };
 
 /**
- * Coordinators earn on communities in their wards, team leaders and super admins on communities in their panchayaths.
- * Each role's share of a community is split equally among everyone of that role covering it.
- * Only community profit is shared, so sales outside communities never appear.
+ * Hierarchy: coordinator → team leader → super admin partner.
+ * Coordinators earn on communities in their wards, team leaders and super admin partners
+ * on communities in their panchayaths. Each role's share of a community is split equally
+ * among everyone of that role covering it. Only community profit is shared, so sales
+ * outside communities never appear.
  */
 export const buildHierarchyRows = (
   people: AllocationPerson[],
@@ -137,21 +152,21 @@ export const buildHierarchyRows = (
   rateForRole: (role: string) => number,
 ): PayoutRow[] => {
   const rows: PayoutRow[] = [];
-  for (const [roleName, type] of Object.entries(HIERARCHY)) {
-    const holders = people.filter((p) => normalizeRoleName(p.role) === roleName);
-    const covering = new Map<string, AllocationPerson[]>();
+  for (const type of HIERARCHY) {
+    const holders = people.filter((p) => hierarchyTypeForRole(p.role) === type);
+    const covering = new Map<string, { person: AllocationPerson; role: string }[]>();
     for (const p of holders) for (const c of communitiesInArea(p, communities)) {
-      covering.set(c.community_id, [...(covering.get(c.community_id) ?? []), p]);
+      covering.set(c.community_id, [...(covering.get(c.community_id) ?? []), { person: p, role: p.role }]);
     }
     for (const c of communities) {
       const list = covering.get(c.community_id);
       if (!list?.length || c.profit <= 0) continue;
-      const rate = rateForRole(roleName);
-      const share = Math.round((c.profit * rate) / list.length) / 100;
-      for (const p of list) rows.push({
+      const share = Math.round((c.profit * rateForRole(rateRoleName(list[0].role))) / list.length) / 100;
+      for (const { person: p } of list) rows.push({
         community_id: c.community_id, community_name: c.community_name, recipient_type: type,
         recipient_name: p.name, recipient_mobile: p.mobile, elife_person_id: `${p.source}:${p.id}`,
-        customer_user_id: null, total_profit: c.profit, commission_rate: rate, share_count: list.length,
+        customer_user_id: null, total_profit: c.profit,
+        commission_rate: rateForRole(rateRoleName(p.role)), share_count: list.length,
         calculated_commission: share,
       });
     }
