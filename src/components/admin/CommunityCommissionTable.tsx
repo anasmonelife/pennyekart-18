@@ -206,7 +206,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
                 <TableCell className="align-top">{g.rows.map(actionLine)}</TableCell>
               </TableRow>
             ))}
-            {groups.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Nothing saved for this period. Click “Calculate &amp; save”.</TableCell></TableRow>}
+            {groups.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">{rows.length > 0 ? "No rows match the current filters." : "Nothing saved for this period. Click “Calculate & save”."}</TableCell></TableRow>}
           </TableBody>
         </Table></div>
       )}
