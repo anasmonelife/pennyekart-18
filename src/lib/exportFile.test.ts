@@ -32,6 +32,7 @@ describe("shareOrDownload", () => {
   });
 
   it("downloads via an attached link when file sharing is unavailable", async () => {
+    stubObjectUrls();
     makeNav(undefined, undefined); // no canShare
     const result = await shareOrDownload(new Blob(["a"]), "users.csv", { title: "Users" });
     expect(result).toBe("downloaded");
@@ -41,6 +42,7 @@ describe("shareOrDownload", () => {
   });
 
   it("falls back to download when sharing is declined", async () => {
+    stubObjectUrls();
     const share = vi.fn().mockRejectedValue(new Error("denied"));
     makeNav(() => true, share);
     const result = await shareOrDownload(new Blob(["a"]), "users.csv", { title: "Users" });
