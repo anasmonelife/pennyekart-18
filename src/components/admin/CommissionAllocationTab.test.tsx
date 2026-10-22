@@ -14,11 +14,11 @@ const person = (id: string, name: string, role: string, panchayaths: string[]) =
 
 const mockQuery = (data: unknown) => {
   const query: Record<string, (...args: unknown[]) => unknown> = {};
-  for (const method of ["select", "eq", "order", "limit", "in"]) {
+  for (const method of ["select", "eq", "order", "limit", "in", "lte", "gte"]) {
     query[method] = () => query;
   }
   query.insert = (values: unknown) => { mocks.inserted(values); return query; };
-  query.maybeSingle = async () => ({ data, error: null });
+  query.maybeSingle = async () => ({ data: Array.isArray(data) && data.length === 0 ? null : data, error: null });
   query.then = (resolve: (result: unknown) => unknown) => Promise.resolve({ data, error: null }).then(resolve);
   return query;
 };
