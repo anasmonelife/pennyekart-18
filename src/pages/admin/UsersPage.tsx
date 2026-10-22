@@ -1,4 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { shareOrDownload } from "@/lib/exportFile";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
@@ -86,6 +88,7 @@ const UsersPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const { isSuperAdmin } = usePermissions();
+  const isMobile = useIsMobile();
   const { toast } = useToast();
 
   const [orderSummaries, setOrderSummaries] = useState<Map<string, { user_id: string; order_count: number; total_spent: number; last_order_date: string | null }>>(new Map());
@@ -422,11 +425,20 @@ const UsersPage = () => {
     return doc;
   };
 
-  const exportPdf = () => {
+  const exportPdf = async () => {
+    const data = exportRowsData();
+    if (!data) return;
     const doc = buildPdf();
     if (!doc) return;
-    doc.save(`users_${filterType}_${new Date().toISOString().slice(0, 10)}.pdf`);
-    toast({ title: "Export ready", description: "Users exported to PDF." });
+    const blob = doc.output("blob");
+    const result = await shareOrDownload(blob, `users_${filterType}_${new Date().toISOString().slice(0, 10)}.pdf`, {
+      title: "Users report",
+      preferShare: isMobile,
+    });
+    toast({
+      title: "Export ready",
+      description: result === "shared" ? "Choose where to save or send the PDF." : "Users exported to PDF.",
+    });
   };
 
   const shareWhatsApp = async () => {
@@ -437,44 +449,30 @@ const UsersPage = () => {
     const fileName = `users_${filterType}_${new Date().toISOString().slice(0, 10)}.pdf`;
     const label = filterType === "admins" ? "Admins" : USER_TYPE_LABELS[filterType] ?? filterType;
     const text = `Pennyekart users report — ${label}: ${data.rows.length} users · ${new Date().toLocaleDateString()}`;
-    const nav = navigator as any;
-    try {
-      if (typeof nav.canShare === "function") {
-        const file = new File([doc.output("blob")], fileName, { type: "application/pdf" });
-        if (nav.canShare({ files: [file] })) {
-          await nav.share({ files: [file], text, title: "Users report" });
-          return;
-        }
-      }
-    } catch (e: any) {
-      if (e?.name === "AbortError") return; // user closed the share sheet
-      toast({ title: "Could not open share", description: e?.message ?? "", variant: "destructive" });
-    }
-    // Fallback: download the PDF and open WhatsApp with a summary message.
-    const blob = doc.output("blob");
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    a.click();
-    URL.revokeObjectURL(url);
+    const result = await shareOrDownload(doc.output("blob"), fileName, {
+      title: "Users report",
+      preferShare: true,
+      text,
+    });
+    if (result === "shared") return;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
     toast({ title: "PDF downloaded", description: "Open WhatsApp and attach the downloaded file." });
   };
 
-  const exportCsv = () => {
+  const exportCsv = async () => {
     const data = exportRowsData();
     if (!data) return;
     const lines = data.body.map((row) => row.map(esc).join(","));
     const csv = "\uFEFF" + [data.headers.join(","), ...lines].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `users_${filterType}_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast({ title: "Export ready", description: `${data.rows.length} users exported to CSV.` });
+    const result = await shareOrDownload(blob, `users_${filterType}_${new Date().toISOString().slice(0, 10)}.csv`, {
+      title: "Users report",
+      preferShare: isMobile,
+    });
+    toast({
+      title: "Export ready",
+      description: result === "shared" ? "Choose where to save or send the CSV." : `${data.rows.length} users exported to CSV.`,
+    });
   };
 
 
