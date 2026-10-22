@@ -118,7 +118,13 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
   };
 
   /** One row per community: creator + hierarchy allocations of the same period stay together. */
-  const groups = groupAllocationRows(rows);
+  const groups = groupAllocationRows(rows).filter(g => {
+    if (statusFilter !== "all" && !g.rows.some(r => r.status === statusFilter)) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return g.community_name.toLowerCase().includes(q)
+      || g.rows.some(r => (r.recipient_name ?? "").toLowerCase().includes(q) || (r.recipient_mobile ?? "").includes(q));
+  });
 
   const recipientLine = (r: SavedRow) => (
     <div key={`name-${r.id}`}>
