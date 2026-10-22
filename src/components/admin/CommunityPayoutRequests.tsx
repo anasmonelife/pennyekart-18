@@ -100,7 +100,7 @@ export default function CommunityPayoutRequests({ ready }: { ready: boolean }) {
             <TableHead>Requested on</TableHead><TableHead>Note</TableHead><TableHead />
           </TableRow></TableHeader>
           <TableBody>
-            {rows.map(r => (
+            {visible.map(r => (
               <TableRow key={r.id}>
                 <TableCell className="font-medium">{r.name || "—"}<p className="text-xs text-muted-foreground">{r.mobile || ""}</p></TableCell>
                 <TableCell className="text-right">{money(r.requested_amount)}</TableCell>
