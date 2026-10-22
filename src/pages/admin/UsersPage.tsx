@@ -458,6 +458,21 @@ const UsersPage = () => {
     toast({ title: "PDF downloaded", description: "Open WhatsApp and attach the downloaded file." });
   };
 
+  const exportCsv = () => {
+    const data = exportRowsData();
+    if (!data) return;
+    const lines = data.body.map((row) => row.map(esc).join(","));
+    const csv = "\uFEFF" + [data.headers.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `users_${filterType}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Export ready", description: `${data.rows.length} users exported to CSV.` });
+  };
+
 
   return (
     <AdminLayout>
