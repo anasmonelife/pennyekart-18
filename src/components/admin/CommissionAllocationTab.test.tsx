@@ -6,6 +6,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 import CommissionAllocationTab from "./CommissionAllocationTab";
 
+beforeEach(() => { mocks.invoke.mockClear(); mocks.from.mockClear(); mocks.rpc.mockClear(); mocks.inserted.mockClear(); });
 afterEach(cleanup);
 const person = (id: string, name: string, role: string, panchayaths: string[]) => ({
   id, source: "pennyekart_agents", name, mobile: "9000000000", role, ward: null, is_active: true,
