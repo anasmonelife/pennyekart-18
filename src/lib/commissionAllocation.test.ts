@@ -69,9 +69,9 @@ describe("hierarchy commission rows", () => {
       { ...person("super_admin_partner", ["Pandikkad", "Amarambalam"]), id: "sap2" },
     ], communities, () => 8);
     const sap = rows.filter((r) => r.recipient_type === "super_admin");
-    // Pandikkad communities A+B (profit 300) split between both partners; Amarambalam C (50) only sap2.
+    // Pandikkad A (₹100) and B (₹200) at 8% split between both partners: ₹4 and ₹8 each.
     const ab = sap.filter((r) => r.community_id === "A" || r.community_id === "B");
-    expect(ab.map((r) => r.calculated_commission)).toEqual([12, 12, 12, 12]);
+    expect(ab.map((r) => r.calculated_commission)).toEqual([4, 4, 8, 8]);
     expect(ab.every((r) => r.share_count === 2)).toBe(true);
     const c = sap.filter((r) => r.community_id === "C");
     expect(c.map((r) => r.calculated_commission)).toEqual([4]);
