@@ -164,6 +164,15 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
       <div className="flex flex-wrap gap-3">
         <div className="space-y-1"><Label htmlFor="allocation-from">Period from</Label><Input id="allocation-from" type="date" value={from} max={to || today} onChange={e => setFrom(e.target.value)} disabled={busy} /></div>
         <div className="space-y-1"><Label htmlFor="allocation-to">Period to</Label><Input id="allocation-to" type="date" value={to} min={from} max={today} onChange={e => setTo(e.target.value)} disabled={busy} /></div>
+        <div className="space-y-1 min-w-[220px] flex-1 max-w-xs"><Label htmlFor="allocation-search">Search</Label><Input id="allocation-search" placeholder="Community or recipient" value={search} onChange={e => setSearch(e.target.value)} /></div>
+        <div className="space-y-1"><Label htmlFor="allocation-status">Status</Label>
+          <select id="allocation-status" className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}>
+            <option value="all">All statuses</option>
+            <option value="pending">Pending verification</option>
+            <option value="verified">Verified</option>
+            <option value="allocated">Allocated</option>
+          </select>
+        </div>
       </div>
       {!validPeriod && <p className="text-sm text-destructive">Choose a valid period ending today or earlier.</p>}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
