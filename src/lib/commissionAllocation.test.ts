@@ -59,4 +59,23 @@ describe("hierarchy commission rows", () => {
     expect(tlA.map((r) => r.calculated_commission)).toEqual([5, 5]);
     expect(rows.some((r) => r.community_id === "C")).toBe(false);
   });
+
+  it("gives super admin partners all communities in their panchayaths and splits the role share equally", async () => {
+    const { buildHierarchyRows, rateRoleName } = await import("./commissionAllocation");
+    expect(rateRoleName("super_admin_partner")).toBe("super admin");
+    expect(rateRoleName("Super Admin Partner")).toBe("super admin");
+    const rows = buildHierarchyRows([
+      person("super_admin_partner", ["Pandikkad"]),
+      { ...person("super_admin_partner", ["Pandikkad", "Amarambalam"]), id: "sap2" },
+    ], communities, () => 8);
+    const sap = rows.filter((r) => r.recipient_type === "super_admin");
+    // Pandikkad communities A+B (profit 300) split between both partners; Amarambalam C (50) only sap2.
+    const ab = sap.filter((r) => r.community_id === "A" || r.community_id === "B");
+    expect(ab.map((r) => r.calculated_commission)).toEqual([12, 12, 12, 12]);
+    expect(ab.every((r) => r.share_count === 2)).toBe(true);
+    const c = sap.filter((r) => r.community_id === "C");
+    expect(c.map((r) => r.calculated_commission)).toEqual([4]);
+    expect(c[0].share_count).toBe(1);
+    expect(sap.every((r) => r.commission_rate === 8)).toBe(true);
+  });
 });
