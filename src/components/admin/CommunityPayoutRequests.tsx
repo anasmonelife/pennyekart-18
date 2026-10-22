@@ -125,7 +125,7 @@ export default function CommunityPayoutRequests({ ready }: { ready: boolean }) {
                 </TableCell>
               </TableRow>
             ))}
-            {rows.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">No payout requests yet.</TableCell></TableRow>}
+            {visible.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">No {STATUS_LABEL[tab]?.toLowerCase()} payout requests.</TableCell></TableRow>}
           </TableBody>
         </Table></div>
       )}
