@@ -1,5 +1,9 @@
 # Roadmap
 
+## Admin users PDF export & WhatsApp share
+- [x] Add "Export PDF" and "WhatsApp" buttons on /admin/users that export the currently filtered user list (or Admins list) as a landscape PDF with active filters noted; WhatsApp attaches the PDF via the native share sheet where supported, otherwise downloads it and opens WhatsApp with a summary message.
+- [ ] Verify PDF content and WhatsApp share on a phone/Android app (needs signed-in admin device check).
+
 ## Community commission wallet allocation
 - [x] Add a role-based, editable commission allocation table for community profit by selected date period.
 - [x] Securely credit each allocated amount to the creator's wallet once and show period details in the wallet Sales Commission tab. Super-admin RPCs verify and allocate under lock; wallet tab lists community, role, period and paid date; focused wallet tests pass.
