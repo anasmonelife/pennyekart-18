@@ -159,7 +159,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
     <section className="space-y-4 border-b pb-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><h2 className="text-lg font-semibold">Allocation table</h2>
-          <p className="text-xs text-muted-foreground">Community profit shared to creator, coordinator (wards), team leader and super admin partner (panchayaths). Sales outside communities are not shared.</p></div>
+          <p className="text-xs text-muted-foreground">Community profit shared to creator, coordinator (wards), team leader and super admin partner (panchayaths). Tap a community to expand its allocations. Sales outside communities are not shared.</p></div>
         <Button size="sm" onClick={() => void calculate()} disabled={busy || !ready || !validPeriod}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Calculate &amp; save</Button>
       </div>
       <div className="flex flex-wrap gap-3">
