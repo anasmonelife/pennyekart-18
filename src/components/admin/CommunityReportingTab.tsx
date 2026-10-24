@@ -13,7 +13,7 @@ import { toast } from "sonner";
 const db = supabase as unknown as { from: (t: string) => any };
 
 interface ReportRow {
-  id: string; community_id: string; community_name: string;
+  id: string; community_id: string; community_name: string; customer_user_id: string | null;
   recipient_type: string; recipient_name: string | null; recipient_mobile: string | null;
   total_profit: number; commission_rate: number; calculated_commission: number; amount: number;
   share_count: number; period_from: string; period_to: string;
