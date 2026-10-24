@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { commissionRateForRole, type CommissionRule } from "@/lib/communityCommission";
 import { commissionAmount, commissionDate, commissionRange } from "@/lib/commissionPayout";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CheckCircle2, Loader2, RefreshCw, Wallet } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, Loader2, RefreshCw, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 const db = supabase as unknown as { from: (t: string) => any; rpc: (fn: string, a?: Record<string, unknown>) => any; functions: typeof supabase.functions };
@@ -37,6 +37,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
   const [confirm, setConfirm] = useState<SavedRow | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "verified" | "allocated">("all");
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const validPeriod = !!from && !!to && from <= to && to <= today;
 
   const load = useCallback(async () => {
@@ -158,7 +159,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
     <section className="space-y-4 border-b pb-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><h2 className="text-lg font-semibold">Allocation table</h2>
-          <p className="text-xs text-muted-foreground">Community profit shared to creator, coordinator (wards), team leader and super admin partner (panchayaths). Sales outside communities are not shared.</p></div>
+          <p className="text-xs text-muted-foreground">Community profit shared to creator, coordinator (wards), team leader and super admin partner (panchayaths). Tap a community to expand its allocations. Sales outside communities are not shared.</p></div>
         <Button size="sm" onClick={() => void calculate()} disabled={busy || !ready || !validPeriod}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Calculate &amp; save</Button>
       </div>
       <div className="flex flex-wrap gap-3">
@@ -184,28 +185,53 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
             <TableHead>Commission (₹)</TableHead><TableHead>Status</TableHead><TableHead />
           </TableRow></TableHeader>
           <TableBody>
-            {groups.map(g => (
-              <TableRow key={g.community_id + g.period_from + g.period_to}>
-                <TableCell className="font-medium align-top">
-                  {g.community_name}
-                  {(g.period_from !== from || g.period_to !== to) && (
-                    <p className="text-xs text-muted-foreground mt-1">{g.period_from} – {g.period_to}</p>
-                  )}
-                </TableCell>
-                <TableCell className="text-right align-top">{money(g.rows[0]?.total_profit ?? 0)}</TableCell>
-                <TableCell className="space-y-2 align-top">{g.rows.map(recipientLine)}</TableCell>
-                <TableCell className="text-right align-top">
-                  <div className="space-y-2">{g.rows.map(r => (
-                    <div key={`calc-${r.id}`} className="text-xs">{r.commission_rate}% · {money(r.calculated_commission)}</div>
-                  ))}</div>
-                </TableCell>
-                <TableCell className="space-y-2 align-top">{g.rows.map(r => (
-                  <Input key={`amount-${r.id}`} type="number" min="0.01" step="0.01" aria-label={`Commission for ${r.recipient_name ?? r.community_name}`} className="w-28" value={edits[r.id] ?? Number(r.amount).toFixed(2)} onChange={e => setEdits(p => ({ ...p, [r.id]: e.target.value }))} disabled={r.status === "allocated" || busy} />
-                ))}</TableCell>
-                <TableCell className="space-y-2 align-top">{g.rows.map(statusLine)}</TableCell>
-                <TableCell className="align-top">{g.rows.map(actionLine)}</TableCell>
-              </TableRow>
-            ))}
+            {groups.map(g => {
+              const key = `${g.community_id}|${g.period_from}|${g.period_to}`;
+              const open = !!expanded[key];
+              const total = g.rows.reduce((s, r) => s + Number(r.amount), 0);
+              const counts = g.rows.reduce<Record<string, number>>((acc, r) => { acc[r.status] = (acc[r.status] ?? 0) + 1; return acc; }, {});
+              const statusText = (["allocated", "verified", "pending"] as const)
+                .filter(s => counts[s]).map(s => `${counts[s]} ${s === "pending" ? "pending" : s}`).join(" · ");
+              return (
+                <Fragment key={key}>
+                  <TableRow className={open ? "bg-muted/40" : "cursor-pointer"} onClick={() => setExpanded(p => ({ ...p, [key]: !p[key] }))}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" className="h-6 w-6 shrink-0 p-0"
+                          aria-expanded={open} aria-label={`${open ? "Collapse" : "Expand"} ${g.community_name}`}
+                          onClick={e => { e.stopPropagation(); setExpanded(p => ({ ...p, [key]: !p[key] })); }}>
+                          {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </Button>
+                        <div>
+                          <p>{g.community_name}</p>
+                          {(g.period_from !== from || g.period_to !== to) && (
+                            <p className="text-xs text-muted-foreground">{g.period_from} – {g.period_to}</p>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">{money(g.rows[0]?.total_profit ?? 0)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{g.rows.length} recipient{g.rows.length === 1 ? "" : "s"}</TableCell>
+                    <TableCell className="text-right text-xs">Total {money(total)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{statusText || "—"}</TableCell>
+                    <TableCell colSpan={2} />
+                  </TableRow>
+                  {open && g.rows.map(r => (
+                    <TableRow key={r.id}>
+                      <TableCell />
+                      <TableCell />
+                      <TableCell className="align-top">{recipientLine(r)}</TableCell>
+                      <TableCell className="text-right align-top text-xs">{r.commission_rate}% · {money(r.calculated_commission)}</TableCell>
+                      <TableCell className="align-top">
+                        <Input type="number" min="0.01" step="0.01" aria-label={`Commission for ${r.recipient_name ?? r.community_name}`} className="w-28" value={edits[r.id] ?? Number(r.amount).toFixed(2)} onChange={e => setEdits(p => ({ ...p, [r.id]: e.target.value }))} disabled={r.status === "allocated" || busy} />
+                      </TableCell>
+                      <TableCell className="align-top">{statusLine(r)}</TableCell>
+                      <TableCell className="align-top">{actionLine(r)}</TableCell>
+                    </TableRow>
+                  ))}
+                </Fragment>
+              );
+            })}
             {groups.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">{rows.length > 0 ? "No rows match the current filters." : "Nothing saved for this period. Click “Calculate & save”."}</TableCell></TableRow>}
           </TableBody>
         </Table></div>
