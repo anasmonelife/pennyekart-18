@@ -22,3 +22,7 @@ export const communityInviteLink = (origin: string, inviteId: string): string =>
 
 export const communityInviteWhatsAppMessage = (communityName: string, link: string): string =>
   `You're invited to join the "${communityName}" community on Pennyekart!\n\nTap to accept:\n${link}`;
+
+/** Opens the WhatsApp app/site with a pre-filled share message. */
+export const whatsappShareUrl = (message: string): string =>
+  `https://wa.me/?text=${encodeURIComponent(message)}`;

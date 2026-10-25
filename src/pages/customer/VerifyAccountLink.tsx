@@ -4,6 +4,9 @@ import { BadgeCheck, ShieldCheck, Clock, Link2, AlertTriangle } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { isNativeApp } from "@/lib/native";
+import { resolveLinkDevice } from "@/lib/appLinks";
+import AppStoreRedirect from "@/components/AppStoreRedirect";
 
 type LinkState = "loading" | "ok" | "already" | "expired" | "mobile_changed" | "invalid" | "error";
 
@@ -50,11 +53,14 @@ const VerifyAccountLink = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") ?? "";
+  const [proceed, setProceed] = useState(
+    resolveLinkDevice(isNativeApp(), navigator.userAgent) !== "mobile_browser",
+  );
   const [state, setState] = useState<LinkState>(token ? "loading" : "invalid");
   const started = useRef(false);
 
   useEffect(() => {
-    if (!token || started.current) return;
+    if (!proceed || !token || started.current) return;
     started.current = true;
     supabase.functions
       .invoke("redeem-verification-link", { body: { token } })
@@ -68,7 +74,9 @@ const VerifyAccountLink = () => {
         else setState("invalid");
       })
       .catch(() => setState("error"));
-  }, [token]);
+  }, [proceed, token]);
+
+  if (!proceed) return <AppStoreRedirect onContinue={() => setProceed(true)} />;
 
   const view = content[state === "loading" ? "error" : state] ?? content.error;
   const Icon = view.icon;
