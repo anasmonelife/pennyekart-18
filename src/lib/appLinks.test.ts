@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { communityInviteLink, communityInviteWhatsAppMessage, resolveLinkDevice } from "./appLinks";
+import { communityInviteLink, communityInviteWhatsAppMessage, resolveLinkDevice, whatsappShareUrl } from "./appLinks";
 
 const ANDROID_UA =
   "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36";
@@ -36,5 +36,12 @@ describe("invite share message", () => {
     const msg = communityInviteWhatsAppMessage("Green Valley", "https://x.test/i/1");
     expect(msg).toContain('"Green Valley"');
     expect(msg).toContain("https://x.test/i/1");
+  });
+});
+
+describe("whatsapp share url", () => {
+  it("encodes the message for wa.me", () => {
+    const msg = communityInviteWhatsAppMessage("Green Valley", "https://x.test/i/1");
+    expect(whatsappShareUrl(msg)).toBe(`https://wa.me/?text=${encodeURIComponent(msg)}`);
   });
 });

@@ -70,6 +70,7 @@ import Cart from "./pages/customer/Cart";
 import CustomerProfile from "./pages/customer/Profile";
 import VerifyAccountLink from "./pages/customer/VerifyAccountLink";
 import CustomerWallet from "./pages/customer/Wallet";
+import CommunityInvite from "./pages/customer/CommunityInvite";
 import PlayVideos from "./pages/customer/PlayVideos";
 import CategoryProducts from "./pages/customer/CategoryProducts";
 import ChatBot from "./components/ChatBot";
@@ -145,6 +146,7 @@ const AppRoutes = () => {
       <Route path="/customer/profile" element={<CustomerProfile />} />
       <Route path="/customer/verify" element={<VerifyAccountLink />} />
       <Route path="/customer/wallet" element={<CustomerWallet />} />
+      <Route path="/community/invite/:inviteId" element={<CommunityInvite />} />
 
       {/* Selling Partner */}
       <Route path="/selling-partner/signup" element={<SellingPartnerSignup />} />
