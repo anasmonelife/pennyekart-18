@@ -68,6 +68,7 @@ import ProductDetail from "./pages/customer/ProductDetail";
 import FlashSaleDetail from "./pages/customer/FlashSaleDetail";
 import Cart from "./pages/customer/Cart";
 import CustomerProfile from "./pages/customer/Profile";
+import VerifyAccountLink from "./pages/customer/VerifyAccountLink";
 import CustomerWallet from "./pages/customer/Wallet";
 import PlayVideos from "./pages/customer/PlayVideos";
 import CategoryProducts from "./pages/customer/CategoryProducts";
@@ -142,6 +143,7 @@ const AppRoutes = () => {
       <Route path="/customer/signup" element={<CustomerSignup />} />
       <Route path="/customer/login" element={<CustomerLogin />} />
       <Route path="/customer/profile" element={<CustomerProfile />} />
+      <Route path="/customer/verify" element={<VerifyAccountLink />} />
       <Route path="/customer/wallet" element={<CustomerWallet />} />
 
       {/* Selling Partner */}

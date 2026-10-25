@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { BadgeCheck, ShieldCheck, MessageCircle, AlertTriangle } from "lucide-react";
+import { BadgeCheck, ShieldCheck, MessageCircle, AlertTriangle, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,15 +7,22 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  buildVerificationLink,
+  canSendVerificationLink,
+  normalizeVerificationMobile,
+  verificationWhatsAppMessage,
+} from "@/lib/accountVerification";
 
 interface Props {
   userId: string;
   profileMobile: string | null;
+  isSuperAdmin?: boolean;
 }
 
 const CODE_TTL_MINUTES = 10;
 
-const VerifyAccountCard = ({ userId, profileMobile }: Props) => {
+const VerifyAccountCard = ({ userId, profileMobile, isSuperAdmin = false }: Props) => {
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"mobile" | "code">("mobile");
@@ -23,6 +30,13 @@ const VerifyAccountCard = ({ userId, profileMobile }: Props) => {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [mismatch, setMismatch] = useState(false);
+
+  // WhatsApp verification link option (super admin, team leader, coordinator)
+  const [roleName, setRoleName] = useState<string | null>(null);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkMobile, setLinkMobile] = useState("");
+  const [linkBusy, setLinkBusy] = useState(false);
+  const [sentLink, setSentLink] = useState<{ mobile: string; waUrl: string } | null>(null);
 
   const loadStatus = useCallback(async () => {
     const { data } = await supabase
@@ -37,8 +51,39 @@ const VerifyAccountCard = ({ userId, profileMobile }: Props) => {
     loadStatus();
   }, [loadStatus]);
 
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("user_roles")
+      .select("roles(name)")
+      .eq("user_id", userId)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const names = ((data ?? []) as { roles?: { name?: string } | null }[])
+          .map((r) => r?.roles?.name ?? null)
+          .filter(Boolean) as string[];
+        setRoleName(names[0] ?? null);
+      });
+    return () => { cancelled = true; };
+  }, [userId]);
+
   const digitsOnly = (v: string) => v.replace(/\D/g, "");
   const normalize = (v: string | null) => (v ? digitsOnly(v).slice(-10) : "");
+
+  const canSend = canSendVerificationLink(isSuperAdmin, roleName);
+
+  const openSelfVerify = () => {
+    setMobile("");
+    setMismatch(false);
+    setStep("mobile");
+    setOpen(true);
+  };
+
+  const openLinkDialog = () => {
+    setLinkMobile("");
+    setSentLink(null);
+    setLinkOpen(true);
+  };
 
   const handleSendCode = async () => {
     setMismatch(false);
@@ -98,6 +143,28 @@ const VerifyAccountCard = ({ userId, profileMobile }: Props) => {
     toast.success("Account verified!");
   };
 
+  const handleCreateLink = async () => {
+    const entered = normalizeVerificationMobile(linkMobile);
+    if (entered.length !== 10) {
+      toast.error("Enter a valid 10-digit mobile number");
+      return;
+    }
+    setLinkBusy(true);
+    const { data, error } = await supabase.functions.invoke("create-verification-link", { body: { mobile: entered } });
+    setLinkBusy(false);
+    const serverErr = (data as { error?: string } | null)?.error;
+    const token = (data as { token?: string } | null)?.token;
+    if (error || serverErr || !token) {
+      toast.error(serverErr || "Could not create the verification link. Please try again.");
+      return;
+    }
+    const link = buildVerificationLink(window.location.origin, token);
+    const waUrl = `https://wa.me/91${entered}?text=${encodeURIComponent(verificationWhatsAppMessage(link))}`;
+    window.open(waUrl, "_blank");
+    setSentLink({ mobile: entered, waUrl });
+    toast.success("Verification link created — WhatsApp opened");
+  };
+
   if (isVerified === null) return null;
 
   return (
@@ -107,7 +174,7 @@ const VerifyAccountCard = ({ userId, profileMobile }: Props) => {
           <div className={`h-10 w-10 rounded-full flex items-center justify-center ${isVerified ? "bg-sky-500/10" : "bg-muted"}`}>
             {isVerified ? <BadgeCheck className="h-5 w-5 text-sky-500" /> : <ShieldCheck className="h-5 w-5 text-muted-foreground" />}
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm flex items-center gap-1.5">
               {isVerified ? "Verified Account" : "Account not verified"}
               {isVerified && <BadgeCheck className="h-4 w-4 text-sky-500" />}
@@ -118,14 +185,26 @@ const VerifyAccountCard = ({ userId, profileMobile }: Props) => {
                 : "Verify your mobile number on WhatsApp to get the blue tick."}
             </p>
           </div>
-          {!isVerified && (
-            <Button size="sm" onClick={() => { setMobile(""); setMismatch(false); setStep("mobile"); setOpen(true); }}>
-              Verify
-            </Button>
+          {(canSend || !isVerified) && (
+            <div className="flex shrink-0 gap-2">
+              {!isVerified && (
+                <Button size="sm" onClick={openSelfVerify}>
+                  Verify
+                </Button>
+              )}
+              {canSend && (
+                <Button size="sm" variant="outline" onClick={openLinkDialog} className="gap-1.5">
+                  <Link2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Verify a customer</span>
+                  <span className="sm:hidden">Link</span>
+                </Button>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
 
+      {/* Self verification with a 6-digit code */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -184,6 +263,62 @@ const VerifyAccountCard = ({ userId, profileMobile }: Props) => {
             ) : (
               <Button onClick={handleVerify} disabled={busy} className="w-full">
                 {busy ? "Verifying..." : "Verify"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* One-tap verification link for a customer (authorized roles only) */}
+      <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{sentLink ? "Link sent" : "Verify a customer"}</DialogTitle>
+            <DialogDescription>
+              {sentLink
+                ? `WhatsApp opened for ${sentLink.mobile}. The account is verified automatically as soon as the customer taps the link (valid for 24 hours).`
+                : "Create a one-tap verification link for a customer's account and send it to their WhatsApp. The account verifies as soon as the customer taps the link."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!sentLink ? (
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="verify-link-mobile">Customer's mobile number</Label>
+                <Input
+                  id="verify-link-mobile"
+                  inputMode="numeric"
+                  placeholder="10-digit number"
+                  value={linkMobile}
+                  onChange={(e) => setLinkMobile(digitsOnly(e.target.value).slice(0, 10))}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                The link works only for the account registered with this number and expires after 24 hours.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                onClick={() => window.open(sentLink.waUrl, "_blank")}
+              >
+                <MessageCircle className="h-4 w-4" />
+                Open WhatsApp again
+              </Button>
+              <Button variant="ghost" size="sm" className="w-full text-xs" onClick={openLinkDialog}>
+                Create another link
+              </Button>
+            </div>
+          )}
+
+          <DialogFooter>
+            {!sentLink && (
+              <Button onClick={handleCreateLink} disabled={linkBusy} className="gap-2 w-full">
+                <Link2 className="h-4 w-4" />
+                {linkBusy ? "Creating link..." : "Create link & open WhatsApp"}
               </Button>
             )}
           </DialogFooter>
