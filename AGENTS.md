@@ -2,6 +2,7 @@
 
 - Resolve community eligibility on the server from protected user_roles with a legacy-role fallback; approve requests atomically in a super-admin-checked RPC, and synchronize existing administrator role changes so grants cannot diverge.
 - Keep community access requests separate from membership invitations; the profile wrapper gates the existing community card and the active admin Communities page hosts the review queue.
+- Block community invitations to community creators inside the invite and invite-acceptance database functions, so nobody can be pulled from owning one community into another (checks live in `invite_to_community` / `respond_to_community_invite`).
 
 - Share automatic-cancellation classification and partner contact visibility in utilityServices helpers; keep this presentation-only so booking permissions and actions remain unchanged.
 
