@@ -1,5 +1,9 @@
 # Roadmap
 
+## WhatsApp verification link (super admin, team leader, coordinator)
+- [x] Add one-tap verification links on the customer profile: authorized roles create a link for any customer's mobile and send it on WhatsApp; the customer taps and the account verifies automatically (24h validity, single-use, mobile-match checked on the server).
+- [ ] Verify link creation and redemption with a signed-in authorized role and a customer device (blocked: external Supabase gives no test sign-in).
+
 ## Admin users PDF export & WhatsApp share
 - [x] Add "Export PDF" and "WhatsApp" buttons on /admin/users that export the currently filtered user list (or Admins list) as a landscape PDF with active filters noted; WhatsApp attaches the PDF via the native share sheet where supported, otherwise downloads it and opens WhatsApp with a summary message.
 - [ ] Verify PDF content and WhatsApp share on a phone/Android app (needs signed-in admin device check).
