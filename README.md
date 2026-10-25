@@ -84,4 +84,4 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/c
 22/10/26 agents 2
 25/10/26 anasmon eva
 25/10/26 agent
-25-10-26 cloud
+25-10-26 cloud shelf
