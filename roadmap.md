@@ -1,5 +1,12 @@
 # Roadmap
 
+## WhatsApp community invites & Play Store redirect
+- [x] Add "Share via WhatsApp" on each pending community invite (and right after creating one) with a link to the new public invite page.
+- [x] Add `/community/invite/:inviteId` landing page: in-app Accept/Decline, login-first with return, mobile-browser countdown to the Play Store with "Continue in browser".
+- [x] Apply the same mobile-browser Play Store redirect to `/verify-account` before redeeming a verification link.
+- [x] Add resolveLinkDevice and invite-message tests; full suite passes.
+- [ ] Verify invite accept and verification redemption on a real Android device (blocked: external Supabase gives no test sign-in).
+
 ## WhatsApp verification link (super admin, team leader, coordinator)
 - [x] Add one-tap verification links on the customer profile: authorized roles create a link for any customer's mobile and send it on WhatsApp; the customer taps and the account verifies automatically (24h validity, single-use, mobile-match checked on the server).
 - [ ] Verify link creation and redemption with a signed-in authorized role and a customer device (blocked: external Supabase gives no test sign-in).

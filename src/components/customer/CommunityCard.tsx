@@ -122,6 +122,12 @@ const CommunityCard = ({ userId }: Props) => {
     load();
   };
 
+  const shareInvite = (inviteId: string) => {
+    const link = communityInviteLink(window.location.origin, inviteId);
+    const message = communityInviteWhatsAppMessage(community?.name ?? "our", link);
+    window.open(whatsappShareUrl(message), "_blank", "noopener,noreferrer");
+  };
+
   const handleInvite = async () => {
     const m = digitsOnly(inviteMobile);
     if (m.length !== 10) {
@@ -129,14 +135,20 @@ const CommunityCard = ({ userId }: Props) => {
       return;
     }
     setBusy(true);
-    const { error } = await rpc("invite_to_community", { _mobile: m });
+    const { data, error } = await rpc("invite_to_community", { _mobile: m });
     setBusy(false);
     if (error) {
       toast.error(error.message.replace(/^.*?:\s*/, ""));
       return;
     }
     setInviteMobile("");
-    toast.success("Invite sent");
+    const inviteId = typeof data === "string" ? data : null;
+    toast.success(
+      "Invite sent",
+      inviteId
+        ? { action: { label: "Share via WhatsApp", onClick: () => shareInvite(inviteId) } }
+        : undefined,
+    );
     load();
   };
 
@@ -342,6 +354,15 @@ const CommunityCard = ({ userId }: Props) => {
                         <div key={inv.invite_id} className="flex items-center gap-2 rounded-lg border p-2.5">
                           <p className="text-sm flex-1">{inv.invited_mobile}</p>
                           <Badge variant="outline" className="text-xs">Pending</Badge>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            disabled={busy}
+                            aria-label={`Share invite to ${inv.invited_mobile} on WhatsApp`}
+                            onClick={() => shareInvite(inv.invite_id)}
+                          >
+                            <Share2 className="h-4 w-4 text-primary" />
+                          </Button>
                           <Button size="icon" variant="ghost" disabled={busy} onClick={() => handleCancelInvite(inv.invite_id)}>
                             <X className="h-4 w-4" />
                           </Button>
