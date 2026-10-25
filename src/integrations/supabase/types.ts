@@ -56,6 +56,39 @@ export type Database = {
         }
         Relationships: []
       }
+      account_verification_links: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_mobile: string
+          customer_user_id: string
+          expires_at: string
+          id: string
+          token_hash: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_mobile: string
+          customer_user_id: string
+          expires_at: string
+          id?: string
+          token_hash: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_mobile?: string
+          customer_user_id?: string
+          expires_at?: string
+          id?: string
+          token_hash?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           created_at: string
