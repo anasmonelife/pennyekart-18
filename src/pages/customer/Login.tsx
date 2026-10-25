@@ -1,7 +1,7 @@
 import LegalLinks from "@/components/LegalLinks";
 import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ const CustomerLogin = () => {
   const [showLiteSuggestion, setShowLiteSuggestion] = useState(false);
   const [failCount, setFailCount] = useState(0);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { setLiteMode } = useLiteMode();
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
@@ -56,7 +57,8 @@ const CustomerLogin = () => {
       }
       await supabase.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
       setLoading(false);
-      navigate("/");
+      const next = searchParams.get("next");
+      navigate(next && next.startsWith("/") ? next : "/");
     } catch (err) {
       clearTimeout(timeoutRef.current);
       setShowLiteSuggestion(true);

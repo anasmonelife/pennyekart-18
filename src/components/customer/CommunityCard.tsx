@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Users, UserPlus, Lock, Crown, Trash2, LogOut, Check, X, Loader2, ChevronDown, AlarmClock } from "lucide-react";
+import { Users, UserPlus, Lock, Crown, Trash2, LogOut, Check, X, Loader2, ChevronDown, AlarmClock, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { communityInviteLink, communityInviteWhatsAppMessage, whatsappShareUrl } from "@/lib/appLinks";
 
 interface Props {
   userId: string;
