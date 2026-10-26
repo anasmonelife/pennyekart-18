@@ -75,13 +75,17 @@ browsers unchanged.
 
 ## Verification
 
-- Unit tests for the link resolver (internal path, full site URL, external URL,
-  `//`-prefixed unsafe path) in the existing test suite; run `bun run test`.
+- Unit tests for the link resolver: valid internal path, full site URL with query
+  parameters, external URL, `//`-prefixed unsafe path, unsafe schemes
+  (`javascript:`), lookalike domains, malformed URLs. Plus an appUrlOpen-style
+  dedupe test (repeat suppressed, later different link not suppressed). Run
+  `bun run test`.
 - Production build clean (observability build log).
 - Playwright check: banner/notification-style internal links navigate in-app on
   the web preview; external links still open a new tab.
-- Reported as manual Android-only steps: replace the placeholder SHA-256,
-  `git pull` + `npx cap sync`, build a new APK/AAB, install, and test
-  (a) tapping a product link from WhatsApp, (b) cold start vs app already open,
-  (c) verification of `https://www.pennyekart.com/.well-known/assetlinks.json`.
-  App Links verification cannot be claimed done until tested on a device.
+- Reported as manual Android-only steps: add the real Play App Signing SHA-256 to
+  `assetlinks.json` and redeploy, `git pull` + `npx cap sync`, build a new
+  APK/AAB, install, and test (a) tapping a product link from WhatsApp,
+  (b) cold start vs app already open, (c) domain verification of
+  `https://www.pennyekart.com/.well-known/assetlinks.json`. App Links
+  verification is NOT claimed done until tested on a device.
