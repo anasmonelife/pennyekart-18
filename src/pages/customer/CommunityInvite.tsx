@@ -28,13 +28,16 @@ const CommunityInvite = () => {
   const { user } = useAuth();
   const [proceed, setProceed] = useState(resolveLinkDevice(isNativeApp(), navigator.userAgent) !== "mobile_browser");
   const [invites, setInvites] = useState<PendingInvite[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!proceed || !user || !inviteId) return;
     let alive = true;
-    rpc("get_my_community_invites").then(({ data }) => {
-      if (alive) setInvites((data as PendingInvite[] | null) ?? []);
+    rpc("get_my_community_invites").then(({ data, error }) => {
+      if (!alive) return;
+      if (error) setLoadError(error.message.replace(/^.*?:\s*/, ""));
+      setInvites((data as PendingInvite[] | null) ?? []);
     });
     return () => { alive = false; };
   }, [proceed, user, inviteId]);
@@ -70,6 +73,8 @@ const CommunityInvite = () => {
               </p>
             ) : invites === null ? (
               <p className="text-sm text-muted-foreground">Checking the invitation…</p>
+            ) : loadError ? (
+              <p className="text-sm text-destructive">{loadError}</p>
             ) : invite ? (
               <p className="text-sm text-muted-foreground">
                 You're invited to join <strong>{invite.community_name}</strong> by {invite.creator_name}.
