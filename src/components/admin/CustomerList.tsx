@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Users, MapPin, ShoppingCart, Wallet, TrendingUp, CalendarDays, UserCheck, UserX, Activity, Download, Clock, Zap, Search, Phone, Ban, CheckCircle, UserPlus, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, MapPin, ShoppingCart, Wallet, TrendingUp, CalendarDays, UserCheck, UserX, Activity, Download, Clock, Zap, Search, Phone, Ban, CheckCircle, UserPlus, Eye, ChevronLeft, ChevronRight, BadgeCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -27,6 +27,7 @@ interface Profile {
   created_at?: string;
   last_login_at?: string | null;
   is_blocked?: boolean;
+  is_verified?: boolean;
   referred_by?: string | null;
   referrer_name?: string | null;
   customer_id?: string | null;
@@ -632,6 +633,7 @@ const CustomerList = ({ customers, orderSummaries, walletSummaries, onRefresh }:
                   <div className="flex items-center gap-1.5 truncate text-sm font-medium">
                     {c.is_blocked && <Ban className="h-3.5 w-3.5 shrink-0 text-destructive" />}
                     <span className="truncate">{c.full_name ?? "—"}</span>
+                    {c.is_verified && <BadgeCheck title="Verified" className="h-4 w-4 shrink-0 fill-blue-500 text-card-foreground" />}
                   </div>
                   <div className="text-xs text-muted-foreground">{c.mobile_number ?? "—"}</div>
                 </div>
@@ -702,7 +704,10 @@ const CustomerList = ({ customers, orderSummaries, walletSummaries, onRefresh }:
                     <div className="flex items-center gap-1.5">
                       {c.is_blocked && <Ban className="h-3.5 w-3.5 text-destructive" />}
                       <div>
-                        <div>{c.full_name ?? "—"}</div>
+                        <div className="flex items-center gap-1.5">
+                          <span>{c.full_name ?? "—"}</span>
+                          {c.is_verified && <BadgeCheck title="Verified" className="h-4 w-4 shrink-0 fill-blue-500 text-card-foreground" />}
+                        </div>
                         {c.customer_id && <div className="text-[10px] font-mono text-primary">{c.customer_id}</div>}
                       </div>
                       {c.referred_by && (
