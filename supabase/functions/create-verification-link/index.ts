@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     .eq("user_type", "customer")
     .maybeSingle();
   if (!customer) return json({ error: "No customer account found with this mobile number" }, 404);
-  if (customer.is_verified) return json({ error: "This customer is already verified" }, 400);
+  if (customer.is_verified) return json({ status: "already_verified" });
 
   const token = generateLinkToken();
   const { error } = await admin.from("account_verification_links").insert({
