@@ -73,6 +73,8 @@ const CommunityInvite = () => {
               </p>
             ) : invites === null ? (
               <p className="text-sm text-muted-foreground">Checking the invitation…</p>
+            ) : loadError ? (
+              <p className="text-sm text-destructive">{loadError}</p>
             ) : invite ? (
               <p className="text-sm text-muted-foreground">
                 You're invited to join <strong>{invite.community_name}</strong> by {invite.creator_name}.
