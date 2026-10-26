@@ -633,7 +633,7 @@ const CustomerList = ({ customers, orderSummaries, walletSummaries, onRefresh }:
                   <div className="flex items-center gap-1.5 truncate text-sm font-medium">
                     {c.is_blocked && <Ban className="h-3.5 w-3.5 shrink-0 text-destructive" />}
                     <span className="truncate">{c.full_name ?? "—"}</span>
-                    {c.is_verified && <BadgeCheck title="Verified" className="h-4 w-4 shrink-0 fill-blue-500 text-card-foreground" />}
+                    {c.is_verified && <span title="Verified" className="inline-flex shrink-0"><BadgeCheck className="h-4 w-4 fill-blue-500 text-card-foreground" /></span>}
                   </div>
                   <div className="text-xs text-muted-foreground">{c.mobile_number ?? "—"}</div>
                 </div>
@@ -706,7 +706,7 @@ const CustomerList = ({ customers, orderSummaries, walletSummaries, onRefresh }:
                       <div>
                         <div className="flex items-center gap-1.5">
                           <span>{c.full_name ?? "—"}</span>
-                          {c.is_verified && <BadgeCheck title="Verified" className="h-4 w-4 shrink-0 fill-blue-500 text-card-foreground" />}
+                          {c.is_verified && <span title="Verified" className="inline-flex shrink-0"><BadgeCheck className="h-4 w-4 fill-blue-500 text-card-foreground" /></span>}
                         </div>
                         {c.customer_id && <div className="text-[10px] font-mono text-primary">{c.customer_id}</div>}
                       </div>
