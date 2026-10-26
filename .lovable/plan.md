@@ -61,7 +61,9 @@ per the uploaded audit brief.
 
 ### 4. appUrlOpen hardening in src/lib/native.ts
 
-- Ignore a repeated identical URL delivered within a short window (dedupe).
+- Cold start and already-running deliveries both route to the linked screen;
+  a repeated identical URL within a short window is deduped without suppressing
+  legitimate subsequent navigation.
 - Malformed or cross-origin links: current behaviour kept (same-origin pushState,
   external opens in place); nothing crashes on bad input.
 
