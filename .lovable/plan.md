@@ -25,27 +25,33 @@ per the uploaded audit brief.
 ### 1. Manifest (needs a new APK/AAB build to take effect)
 
 - Set `android:autoVerify="true"` on the https intent filter.
-- Add `pathPrefix` entries for all public screens: `/product`, `/category`,
-  `/flash-sale`, `/services`, `/utility-services`, `/penny-prime`, `/pennycarbs`,
-  `/play`, `/community`, `/customer` (covers verify/wallet/profile), `/cart`.
-- Keep the existing data entries; do not change the package ID.
+- Add `pathPrefix` entries only for the agreed routes: `/product` (list + details),
+  `/category`, `/community` (keeps existing invite handling), and `/customer/verify`
+  (kept as-is). No other routes — wallet, profile, cart, and unrelated pages are
+  NOT added, so the filter cannot intercept unrelated URLs.
+- Preserve existing query parameters; do not change the package ID.
 
 ### 2. Domain verification file
 
 - Create `public/.well-known/assetlinks.json` with package `com.pennyekart.app`
-  and a clearly marked `PLACEHOLDER-SHA256` fingerprint.
-- Add a short instruction block in `PLAY_STORE_CHECKLIST.md`: where to copy the
-  real SHA-256 (Play Console → Setup → App signing) and that the file goes live
-  automatically with the next site deploy (Vercel serves `public/` before rewrites).
-- Until the real fingerprint is in place, verification fails and Android shows a
+  and an empty sha256 value — no invented or placeholder fingerprint is shipped.
+- Document loudly in `PLAY_STORE_CHECKLIST.md`: the real Play App Signing SHA-256
+  (Play Console → Setup → App signing) must be filled into that file and the site
+  redeployed before App Links verification can succeed (Vercel serves `public/`
+  files before rewrites, so the file goes live with the deploy).
+- Until the real fingerprint is deployed, verification fails and Android shows a
   chooser instead of silently opening the browser — same or better than today.
 
 ### 3. One shared link resolver for admin-entered links
 
 - New helper in `src/lib/appLinks.ts` (or a sibling module): `resolveInternalLink(url)`
-  returns an in-app route for internal links — bare paths (`/product/1`),
-  full site URLs (`https://www.pennyekart.com/product/1`), and same-host
-  variants — and `null` for genuinely external URLs (wa.me, Play Store, maps).
+  returns an in-app route ONLY for internal links on the canonical host
+  (`www.pennyekart.com`) plus explicitly approved same-site hosts. It accepts bare
+  paths (`/product/1`), full site URLs (`https://www.pennyekart.com/product/1`),
+  tolerates trailing slashes and encoded paths, and returns `null` for everything
+  else — protocol-relative URLs (`//evil.example`), unsafe schemes
+  (`javascript:`, `data:`), lookalike domains (`pennyekart.com.evil.io`,
+  `notpennyekart.com`), and genuinely external URLs (wa.me, Play Store, maps).
 - BannerCarousel, NotificationPopup, NotificationDetailDialog, OfferFlashPopup
   (and ScratchRewards product coupon links, which already navigate — verify only)
   use it: internal → React Router navigation inside the app; external → unchanged
@@ -55,7 +61,9 @@ per the uploaded audit brief.
 
 ### 4. appUrlOpen hardening in src/lib/native.ts
 
-- Ignore a repeated identical URL delivered within a short window (dedupe).
+- Cold start and already-running deliveries both route to the linked screen;
+  a repeated identical URL within a short window is deduped without suppressing
+  legitimate subsequent navigation.
 - Malformed or cross-origin links: current behaviour kept (same-origin pushState,
   external opens in place); nothing crashes on bad input.
 
@@ -67,13 +75,17 @@ browsers unchanged.
 
 ## Verification
 
-- Unit tests for the link resolver (internal path, full site URL, external URL,
-  `//`-prefixed unsafe path) in the existing test suite; run `bun run test`.
+- Unit tests for the link resolver: valid internal path, full site URL with query
+  parameters, external URL, `//`-prefixed unsafe path, unsafe schemes
+  (`javascript:`), lookalike domains, malformed URLs. Plus an appUrlOpen-style
+  dedupe test (repeat suppressed, later different link not suppressed). Run
+  `bun run test`.
 - Production build clean (observability build log).
 - Playwright check: banner/notification-style internal links navigate in-app on
   the web preview; external links still open a new tab.
-- Reported as manual Android-only steps: replace the placeholder SHA-256,
-  `git pull` + `npx cap sync`, build a new APK/AAB, install, and test
-  (a) tapping a product link from WhatsApp, (b) cold start vs app already open,
-  (c) verification of `https://www.pennyekart.com/.well-known/assetlinks.json`.
-  App Links verification cannot be claimed done until tested on a device.
+- Reported as manual Android-only steps: add the real Play App Signing SHA-256 to
+  `assetlinks.json` and redeploy, `git pull` + `npx cap sync`, build a new
+  APK/AAB, install, and test (a) tapping a product link from WhatsApp,
+  (b) cold start vs app already open, (c) domain verification of
+  `https://www.pennyekart.com/.well-known/assetlinks.json`. App Links
+  verification is NOT claimed done until tested on a device.
