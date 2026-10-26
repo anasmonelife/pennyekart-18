@@ -154,6 +154,11 @@ const VerifyAccountCard = ({ userId, profileMobile, isSuperAdmin = false }: Prop
     setLinkBusy(false);
     const serverErr = (data as { error?: string } | null)?.error;
     const token = (data as { token?: string } | null)?.token;
+    if ((data as { status?: string } | null)?.status === "already_verified") {
+      toast.info("This customer is already verified — no link needed.");
+      openLinkDialog();
+      return;
+    }
     if (error || serverErr || !token) {
       toast.error(serverErr || "Could not create the verification link. Please try again.");
       return;
