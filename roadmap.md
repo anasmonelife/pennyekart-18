@@ -1,5 +1,11 @@
 # Roadmap
 
+## Invite links open the invite screen in the installed app
+- [x] Android browser redirect tries the app first (intent:// with Play Store fallback) and keeps "Continue in browser".
+- [x] Android app accepts https links (manifest intent filter for /community/invite and /customer/verify) and routes the web view to the linked screen via appUrlOpen.
+- [ ] Takes effect on devices after the next APK/AAB build and Play Store update (blocked: native build is done outside this project).
+
+
 ## WhatsApp community invites & Play Store redirect
 - [x] Add "Share via WhatsApp" on each pending community invite (and right after creating one) with a link to the new public invite page.
 - [x] Add `/community/invite/:inviteId` landing page: in-app Accept/Decline, login-first with return, mobile-browser countdown to the Play Store with "Continue in browser".
