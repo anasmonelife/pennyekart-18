@@ -25,19 +25,21 @@ per the uploaded audit brief.
 ### 1. Manifest (needs a new APK/AAB build to take effect)
 
 - Set `android:autoVerify="true"` on the https intent filter.
-- Add `pathPrefix` entries for all public screens: `/product`, `/category`,
-  `/flash-sale`, `/services`, `/utility-services`, `/penny-prime`, `/pennycarbs`,
-  `/play`, `/community`, `/customer` (covers verify/wallet/profile), `/cart`.
-- Keep the existing data entries; do not change the package ID.
+- Add `pathPrefix` entries only for the agreed routes: `/product` (list + details),
+  `/category`, `/community` (keeps existing invite handling), and `/customer/verify`
+  (kept as-is). No other routes — wallet, profile, cart, and unrelated pages are
+  NOT added, so the filter cannot intercept unrelated URLs.
+- Preserve existing query parameters; do not change the package ID.
 
 ### 2. Domain verification file
 
 - Create `public/.well-known/assetlinks.json` with package `com.pennyekart.app`
-  and a clearly marked `PLACEHOLDER-SHA256` fingerprint.
-- Add a short instruction block in `PLAY_STORE_CHECKLIST.md`: where to copy the
-  real SHA-256 (Play Console → Setup → App signing) and that the file goes live
-  automatically with the next site deploy (Vercel serves `public/` before rewrites).
-- Until the real fingerprint is in place, verification fails and Android shows a
+  and an empty sha256 value — no invented or placeholder fingerprint is shipped.
+- Document loudly in `PLAY_STORE_CHECKLIST.md`: the real Play App Signing SHA-256
+  (Play Console → Setup → App signing) must be filled into that file and the site
+  redeployed before App Links verification can succeed (Vercel serves `public/`
+  files before rewrites, so the file goes live with the deploy).
+- Until the real fingerprint is deployed, verification fails and Android shows a
   chooser instead of silently opening the browser — same or better than today.
 
 ### 3. One shared link resolver for admin-entered links
