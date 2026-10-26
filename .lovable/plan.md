@@ -45,9 +45,13 @@ per the uploaded audit brief.
 ### 3. One shared link resolver for admin-entered links
 
 - New helper in `src/lib/appLinks.ts` (or a sibling module): `resolveInternalLink(url)`
-  returns an in-app route for internal links — bare paths (`/product/1`),
-  full site URLs (`https://www.pennyekart.com/product/1`), and same-host
-  variants — and `null` for genuinely external URLs (wa.me, Play Store, maps).
+  returns an in-app route ONLY for internal links on the canonical host
+  (`www.pennyekart.com`) plus explicitly approved same-site hosts. It accepts bare
+  paths (`/product/1`), full site URLs (`https://www.pennyekart.com/product/1`),
+  tolerates trailing slashes and encoded paths, and returns `null` for everything
+  else — protocol-relative URLs (`//evil.example`), unsafe schemes
+  (`javascript:`, `data:`), lookalike domains (`pennyekart.com.evil.io`,
+  `notpennyekart.com`), and genuinely external URLs (wa.me, Play Store, maps).
 - BannerCarousel, NotificationPopup, NotificationDetailDialog, OfferFlashPopup
   (and ScratchRewards product coupon links, which already navigate — verify only)
   use it: internal → React Router navigation inside the app; external → unchanged
