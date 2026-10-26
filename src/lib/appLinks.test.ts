@@ -45,3 +45,26 @@ describe("whatsapp share url", () => {
     expect(whatsappShareUrl(msg)).toBe(`https://wa.me/?text=${encodeURIComponent(msg)}`);
   });
 });
+
+describe("android app intent url", () => {
+  it("targets the app package with the link path and scheme", () => {
+    const intent = androidAppIntentUrl("https://www.pennyekart.com/community/invite/abc-123");
+    expect(intent).toContain("intent://www.pennyekart.com/community/invite/abc-123#Intent;");
+    expect(intent).toContain("scheme=https");
+    expect(intent).toContain(`package=com.pennyekart.app`);
+    expect(intent.endsWith(";end")).toBe(true);
+  });
+
+  it("falls back to the same link when the app is not installed", () => {
+    const link = "https://www.pennyekart.com/customer/verify?token=a/b";
+    expect(androidAppIntentUrl(link)).toContain(
+      `S.browser_fallback_url=${encodeURIComponent(link)}`,
+    );
+  });
+
+  it("keeps the query string in the intent path", () => {
+    expect(androidAppIntentUrl("https://x.test/community/invite/i1?next=2")).toContain(
+      "intent://x.test/community/invite/i1?next=2#Intent;",
+    );
+  });
+});

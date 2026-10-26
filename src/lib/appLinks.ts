@@ -20,6 +20,18 @@ export const resolveLinkDevice = (isNative: boolean, userAgent: string): LinkDev
 export const communityInviteLink = (origin: string, inviteId: string): string =>
   `${origin.replace(/\/+$/, "")}/community/invite/${inviteId}`;
 
+export const APP_PACKAGE = "com.pennyekart.app";
+
+/**
+ * Android-only: opens the installed app with the given link (the app routes to
+ * the linked screen via appUrlOpen). If the app is not installed, Chrome falls
+ * back to browser_fallback_url — the Play Store listing.
+ */
+export const androidAppIntentUrl = (linkUrl: string): string => {
+  const u = new URL(linkUrl);
+  return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;package=${APP_PACKAGE};S.browser_fallback_url=${encodeURIComponent(linkUrl)};end`;
+};
+
 export const communityInviteWhatsAppMessage = (communityName: string, link: string): string =>
   `You're invited to join the "${communityName}" community on Pennyekart!\n\nTap to accept:\n${link}`;
 

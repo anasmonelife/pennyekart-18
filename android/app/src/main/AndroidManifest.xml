@@ -18,6 +18,22 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- WhatsApp-shared links (community invites, account verification)
+                 open the app directly at the linked screen. Non-verified app
+                 links: Android shows a chooser instead of auto-opening. -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="www.pennyekart.com"
+                    android:pathPrefix="/community/invite" />
+                <data
+                    android:scheme="https"
+                    android:host="www.pennyekart.com"
+                    android:pathPrefix="/customer/verify" />
+            </intent-filter>
         </activity>
 
         <provider

@@ -189,6 +189,19 @@ export const initNativeApp = async () => {
         .then((p) => { if (p.receive === "granted") void registerForPush().catch(() => {}); })
         .catch(() => {});
     });
+    // WhatsApp-shared links (community invites, verification) open the app via
+    // an Android intent; route the web view to the linked screen.
+    await App.addListener("appUrlOpen", ({ url }) => {
+      try {
+        const target = new URL(url);
+        if (target.origin === window.location.origin) {
+          window.history.pushState({}, "", target.pathname + target.search);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        } else {
+          window.location.href = url;
+        }
+      } catch { /* ignore malformed link */ }
+    });
   } catch { /* ignore */ }
 
   try {
