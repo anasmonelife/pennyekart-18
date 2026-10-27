@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { androidAppIntentUrl, communityInviteLink, communityInviteWhatsAppMessage, resolveLinkDevice, whatsappShareUrl } from "./appLinks";
+import {
+  androidAppIntentUrl,
+  communityInviteLink,
+  communityInviteWhatsAppMessage,
+  resetDeepLinkDedupe,
+  resolveInternalLink,
+  resolveLinkDevice,
+  shouldOpenDeepLink,
+  whatsappShareUrl,
+} from "./appLinks";
 
 const ANDROID_UA =
   "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36";
