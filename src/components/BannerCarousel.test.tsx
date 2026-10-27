@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ from: vi.fn(), navigate: vi.fn() }));
@@ -8,6 +9,13 @@ vi.mock("react-router-dom", () => ({ useNavigate: () => mocks.navigate }));
 import BannerCarousel from "./BannerCarousel";
 
 afterEach(cleanup);
+
+const renderCarousel = () =>
+  render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <BannerCarousel />
+    </QueryClientProvider>
+  );
 
 const banners = [
   { title: "Spice sale", image_url: "/img/spice.jpg", link_url: "https://www.pennyekart.com/category/Spices?sort=new", sort_order: 1, is_active: true },
