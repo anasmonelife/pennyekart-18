@@ -32,7 +32,7 @@ const mockQuery = (data: unknown) => {
 describe("banner links", () => {
   it("navigates internal banner links inside the app", async () => {
     mocks.from.mockImplementation(() => mockQuery(banners));
-    render(<BannerCarousel />);
+    renderCarousel();
     const link = await waitFor(() => {
       const el = screen.getByRole("link", { name: /Spice sale/i });
       expect(el).toHaveAttribute("href", "/category/Spices?sort=new");
@@ -45,7 +45,7 @@ describe("banner links", () => {
 
   it("opens external banner links in a new tab", async () => {
     mocks.from.mockImplementation(() => mockQuery(banners));
-    render(<BannerCarousel />);
+    renderCarousel();
     await waitFor(() => expect(screen.getByRole("link", { name: /WhatsApp deal/i })).toBeInTheDocument());
     const external = screen.getByRole("link", { name: /WhatsApp deal/i });
     expect(external).toHaveAttribute("href", "https://wa.me/?text=hi");
