@@ -1,5 +1,6 @@
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications, type Token } from "@capacitor/push-notifications";
+import { shouldOpenDeepLink } from "@/lib/appLinks";
 
 /**
  * Firebase (android/app/google-services.json) is present for all Pennyekart
@@ -189,9 +190,12 @@ export const initNativeApp = async () => {
         .then((p) => { if (p.receive === "granted") void registerForPush().catch(() => {}); })
         .catch(() => {});
     });
-    // WhatsApp-shared links (community invites, verification) open the app via
-    // an Android intent; route the web view to the linked screen.
+    // Pennyekart links (product, category, community invite, verification) open
+    // the app via Android app links or an intent; route the web view to the
+    // linked screen. Identical re-deliveries within a short window are deduped
+    // so one tap cannot navigate twice; bad input never crashes.
     await App.addListener("appUrlOpen", ({ url }) => {
+      if (!shouldOpenDeepLink(url)) return;
       try {
         const target = new URL(url);
         if (target.origin === window.location.origin) {
