@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveInternalLink } from "@/lib/appLinks";
 import banner1 from "@/assets/banner-1.jpg";
 import banner2 from "@/assets/banner-2.jpg";
 import banner3 from "@/assets/banner-3.jpg";
@@ -30,6 +32,7 @@ const fetchBanners = async () => {
 
 const BannerCarousel = () => {
   const [current, setCurrent] = useState(0);
+  const navigate = useNavigate();
   const { data: banners = [] } = useQuery({
     queryKey: ["banners"],
     queryFn: fetchBanners,
@@ -53,9 +56,20 @@ const BannerCarousel = () => {
 
   if (banners.length === 0) return null;
 
+  // Internal Pennyekart links navigate inside the app; external ones keep the
+  // system browser behaviour (new tab).
   const BannerImage = ({ src, alt, link, className }: { src: string; alt: string; link: string; className: string }) => {
     const img = <img src={src} alt={alt} className={className} loading="lazy" />;
-    return link ? <a href={link} target="_blank" rel="noopener noreferrer">{img}</a> : img;
+    if (!link) return img;
+    const route = resolveInternalLink(link);
+    if (route) {
+      return (
+        <a href={route} onClick={(e) => { e.preventDefault(); navigate(route); }}>
+          {img}
+        </a>
+      );
+    }
+    return <a href={link} target="_blank" rel="noopener noreferrer">{img}</a>;
   };
 
   return (

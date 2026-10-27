@@ -3,6 +3,12 @@
 ## Invite links open the invite screen in the installed app
 - [x] Android browser redirect tries the app first (intent:// with Play Store fallback) and keeps "Continue in browser".
 - [x] Android app accepts https links (manifest intent filter for /community/invite and /customer/verify) and routes the web view to the linked screen via appUrlOpen.
+
+## Android deep links & in-app navigation fix
+- [x] Manifest intent filter autoVerify=true, expanded to /product and /category (needs new APK/AAB build).
+- [x] public/.well-known/assetlinks.json created with empty fingerprint; PLAY_STORE_CHECKLIST.md documents filling the real Play App Signing SHA-256 and redeploying.
+- [x] resolveInternalLink in src/lib/appLinks.ts shared by BannerCarousel, NotificationPopup, NotificationDetailDialog and OfferFlashPopup — internal links navigate in-app, external keep new-tab behaviour.
+- [x] appUrlOpen dedupe (shouldOpenDeepLink) for repeated identical deliveries; tests added.
 - [ ] Takes effect on devices after the next APK/AAB build and Play Store update (blocked: native build is done outside this project).
 
 

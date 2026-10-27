@@ -18,17 +18,28 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- WhatsApp-shared links (community invites, account verification)
-                 open the app directly at the linked screen. Non-verified app
-                 links: Android shows a chooser instead of auto-opening. -->
-            <intent-filter android:autoVerify="false">
+            <!-- Pennyekart app links: auto-verified against
+                 https://www.pennyekart.com/.well-known/assetlinks.json (the
+                 real Play App Signing SHA-256 must be filled in there before
+                 verification succeeds; see PLAY_STORE_CHECKLIST.md). Covers
+                 only product, category, community and customer-verify routes —
+                 wallet/profile/cart URLs must never be intercepted. -->
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
                     android:host="www.pennyekart.com"
-                    android:pathPrefix="/community/invite" />
+                    android:pathPrefix="/product" />
+                <data
+                    android:scheme="https"
+                    android:host="www.pennyekart.com"
+                    android:pathPrefix="/category" />
+                <data
+                    android:scheme="https"
+                    android:host="www.pennyekart.com"
+                    android:pathPrefix="/community" />
                 <data
                     android:scheme="https"
                     android:host="www.pennyekart.com"

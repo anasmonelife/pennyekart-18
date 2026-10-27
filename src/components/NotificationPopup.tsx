@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useNotifications, type AppNotification } from "@/hooks/useNotifications";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { resolveInternalLink } from "@/lib/appLinks";
 import { Bell, ExternalLink } from "lucide-react";
 
 const SHOWN_KEY = "notif_popup_shown_v1";
@@ -57,11 +58,13 @@ const NotificationPopup = () => {
   const handleLinkClick = () => {
     if (!activeNotification.link_url) return;
     markClicked(activeNotification.id);
-    if (activeNotification.link_url.startsWith("http")) {
-      window.open(activeNotification.link_url, "_blank", "noopener,noreferrer");
-    } else {
-      navigate(activeNotification.link_url);
+    // Internal Pennyekart links open inside the app; external ones open a tab.
+    const route = resolveInternalLink(activeNotification.link_url);
+    if (route) {
+      navigate(route);
       handleOpenChange(false);
+    } else {
+      window.open(activeNotification.link_url, "_blank", "noopener,noreferrer");
     }
   };
 

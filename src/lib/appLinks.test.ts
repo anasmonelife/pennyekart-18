@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { androidAppIntentUrl, communityInviteLink, communityInviteWhatsAppMessage, resolveLinkDevice, whatsappShareUrl } from "./appLinks";
+import {
+  androidAppIntentUrl,
+  communityInviteLink,
+  communityInviteWhatsAppMessage,
+  resetDeepLinkDedupe,
+  resolveInternalLink,
+  resolveLinkDevice,
+  shouldOpenDeepLink,
+  whatsappShareUrl,
+} from "./appLinks";
 
 const ANDROID_UA =
   "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36";
@@ -66,5 +75,65 @@ describe("android app intent url", () => {
     expect(androidAppIntentUrl("https://x.test/community/invite/i1?next=2")).toContain(
       "intent://x.test/community/invite/i1?next=2#Intent;",
     );
+  });
+});
+
+describe("resolveInternalLink", () => {
+  it("accepts bare internal paths", () => {
+    expect(resolveInternalLink("/product/abc")).toBe("/product/abc");
+    expect(resolveInternalLink("/category/Spices")).toBe("/category/Spices");
+  });
+
+  it("accepts full site URLs and preserves query parameters", () => {
+    expect(resolveInternalLink("https://www.pennyekart.com/category/Spices?sort=new")).toBe(
+      "/category/Spices?sort=new",
+    );
+  });
+
+  it("accepts the apex domain and tolerates trailing slashes", () => {
+    expect(resolveInternalLink("https://pennyekart.com/product/abc/")).toBe("/product/abc");
+  });
+
+  it("returns null for genuinely external URLs", () => {
+    expect(resolveInternalLink("https://wa.me/?text=hi")).toBeNull();
+    expect(
+      resolveInternalLink("https://play.google.com/store/apps/details?id=com.pennyekart.app"),
+    ).toBeNull();
+  });
+
+  it("returns null for protocol-relative URLs and unsafe schemes", () => {
+    expect(resolveInternalLink("//evil.example/product/1")).toBeNull();
+    expect(resolveInternalLink("javascript:alert(1)")).toBeNull();
+    expect(resolveInternalLink("data:text/html,hi")).toBeNull();
+  });
+
+  it("returns null for lookalike domains", () => {
+    expect(resolveInternalLink("https://pennyekart.com.evil.io/product/1")).toBeNull();
+    expect(resolveInternalLink("https://notpennyekart.com/product/1")).toBeNull();
+  });
+
+  it("returns null for empty or malformed input", () => {
+    expect(resolveInternalLink("")).toBeNull();
+    expect(resolveInternalLink("not a url at all")).toBeNull();
+  });
+});
+
+describe("appUrlOpen dedupe", () => {
+  it("suppresses a repeated identical link within the window", () => {
+    resetDeepLinkDedupe();
+    expect(shouldOpenDeepLink("https://www.pennyekart.com/product/1", 1000)).toBe(true);
+    expect(shouldOpenDeepLink("https://www.pennyekart.com/product/1", 1500)).toBe(false);
+  });
+
+  it("does not suppress a later different link", () => {
+    resetDeepLinkDedupe();
+    expect(shouldOpenDeepLink("https://www.pennyekart.com/product/1", 1000)).toBe(true);
+    expect(shouldOpenDeepLink("https://www.pennyekart.com/product/2", 1200)).toBe(true);
+  });
+
+  it("lets the same link through again after the window passes", () => {
+    resetDeepLinkDedupe();
+    expect(shouldOpenDeepLink("https://www.pennyekart.com/product/1", 1000)).toBe(true);
+    expect(shouldOpenDeepLink("https://www.pennyekart.com/product/1", 1000 + 2000)).toBe(true);
   });
 });

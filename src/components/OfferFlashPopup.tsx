@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { resolveInternalLink } from "@/lib/appLinks";
 import { X, ChevronLeft, ChevronRight, Gift } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -99,14 +100,12 @@ const OfferFlashPopup = () => {
   }, [open, screen?.id]);
 
   const handleClick = (linkUrl: string | null) => {
-    if (linkUrl) {
-      setOpen(false);
-      if (linkUrl.startsWith("http")) {
-        window.open(linkUrl, "_blank");
-      } else {
-        navigate(linkUrl);
-      }
-    }
+    if (!linkUrl) return;
+    setOpen(false);
+    // Internal Pennyekart links open inside the app; external ones open a tab.
+    const route = resolveInternalLink(linkUrl);
+    if (route) navigate(route);
+    else window.open(linkUrl, "_blank", "noopener,noreferrer");
   };
 
   if (eligibleScreens.length === 0 || !screen) return null;
