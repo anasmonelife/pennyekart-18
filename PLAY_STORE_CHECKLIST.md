@@ -28,6 +28,25 @@
 INTERNET, ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, POST_NOTIFICATIONS, RECORD_AUDIO (Penny Assistant voice only).
 No background location, contacts, SMS, phone or broad storage permissions.
 
+## App Links (deep links) — REQUIRED before links auto-open the app
+**The https intent filter in `AndroidManifest.xml` is now `autoVerify="true"` for
+`/product`, `/category`, `/community` and `/customer/verify` on
+www.pennyekart.com. Verification CANNOT succeed until the steps below are done —
+until then Android shows a chooser instead of auto-opening (same or better than
+before). The manifest change only takes effect after a new APK/AAB build.**
+
+- [ ] Copy the Play App Signing SHA-256 (Play Console → Setup → App signing)
+- [ ] Paste it into `public/.well-known/assetlinks.json`, replacing the empty
+      `""` in `sha256_cert_fingerprints` (no placeholder fingerprint is shipped)
+- [ ] Redeploy the website so the updated `assetlinks.json` is live
+      (`public/` files are served before rewrites, so it goes live with the deploy)
+- [ ] Check `https://www.pennyekart.com/.well-known/assetlinks.json` in a
+      browser shows the real fingerprint
+- [ ] On a device: rebuild the app (`git pull`, `npx cap sync android`, new
+      APK/AAB), then test (a) a product link from WhatsApp, (b) cold start vs
+      app already open, (c) `adb shell pm verify-app-links --re-verify
+      com.pennyekart.app` and `adb shell pm get-app-links com.pennyekart.app`
+
 ## Before uploading
 - [ ] `git pull`, `npm install`, `npm run build`, `npx cap sync android`
 - [ ] Add `google-services.json` if push notifications are used
