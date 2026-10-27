@@ -33,23 +33,26 @@ describe("banner links", () => {
   it("navigates internal banner links inside the app", async () => {
     mocks.from.mockImplementation(() => mockQuery(banners));
     renderCarousel();
-    const link = await waitFor(() => {
-      const el = screen.getByRole("link", { name: /Spice sale/i });
-      expect(el).toHaveAttribute("href", "/category/Spices?sort=new");
-      expect(el).not.toHaveAttribute("target", "_blank");
-      return el;
+    const links = await waitFor(() => {
+      const els = screen.getAllByRole("link", { name: /Spice sale/i });
+      for (const el of els) {
+        expect(el).toHaveAttribute("href", "/category/Spices?sort=new");
+        expect(el).not.toHaveAttribute("target", "_blank");
+      }
+      return els;
     });
-    fireEvent.click(link);
+    fireEvent.click(links[0]);
     expect(mocks.navigate).toHaveBeenCalledWith("/category/Spices?sort=new");
   });
 
   it("opens external banner links in a new tab", async () => {
     mocks.from.mockImplementation(() => mockQuery(banners));
     renderCarousel();
-    await waitFor(() => expect(screen.getByRole("link", { name: /WhatsApp deal/i })).toBeInTheDocument());
-    const external = screen.getByRole("link", { name: /WhatsApp deal/i });
-    expect(external).toHaveAttribute("href", "https://wa.me/?text=hi");
-    expect(external).toHaveAttribute("target", "_blank");
-    expect(external).toHaveAttribute("rel", "noopener noreferrer");
+    await waitFor(() => expect(screen.getAllByRole("link", { name: /WhatsApp deal/i }).length).toBeGreaterThan(0));
+    for (const external of screen.getAllByRole("link", { name: /WhatsApp deal/i })) {
+      expect(external).toHaveAttribute("href", "https://wa.me/?text=hi");
+      expect(external).toHaveAttribute("target", "_blank");
+      expect(external).toHaveAttribute("rel", "noopener noreferrer");
+    }
   });
 });
