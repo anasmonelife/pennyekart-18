@@ -35,13 +35,15 @@ www.pennyekart.com. Verification CANNOT succeed until the steps below are done �
 until then Android shows a chooser instead of auto-opening (same or better than
 before). The manifest change only takes effect after a new APK/AAB build.**
 
-- [ ] Copy the Play App Signing SHA-256 (Play Console → Setup → App signing)
-- [ ] Paste it into `public/.well-known/assetlinks.json`, replacing the empty
-      `""` in `sha256_cert_fingerprints` (no placeholder fingerprint is shipped)
+- [x] Play App Signing SHA-256 pasted into `public/.well-known/assetlinks.json`
+      (Play Console → Setup → App signing):
+      `7C:D9:28:BC:EA:04:8D:DF:2F:17:19:18:2F:E9:93:15:95:9E:D6:C9:E0:D7:CA:1E:2D:8C:21:D0:B7:02:CD:B2`
 - [ ] Redeploy the website so the updated `assetlinks.json` is live
       (`public/` files are served before rewrites, so it goes live with the deploy)
 - [ ] Check `https://www.pennyekart.com/.well-known/assetlinks.json` in a
-      browser shows the real fingerprint
+      browser shows the real fingerprint — as of 2026-10-27 the live URL
+      returns HTTP 200 but serves the app HTML (deployed build predates the
+      file), so Android cannot verify yet
 - [ ] On a device: rebuild the app (`git pull`, `npx cap sync android`, new
       APK/AAB), then test (a) a product link from WhatsApp, (b) cold start vs
       app already open, (c) `adb shell pm verify-app-links --re-verify
