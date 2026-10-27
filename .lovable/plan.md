@@ -1,91 +1,80 @@
-# Android deep links & in-app navigation fix
+# Product & community links must open the Android app
 
-Fixes the problem where Pennyekart links (products, community, verification, banners,
-notification links) open in the web browser instead of the installed Android app,
-per the uploaded audit brief.
+Implements the two fixes from the pasted audit (share `https://www.pennyekart.com/product/...` directly, add the non-www host to the manifest). The other two causes from the audit (debug-signed build, old APK on the device) are deployment/device steps and stay in the Play Store checklist — no code change can fix them.
 
-## Confirmed root causes (read from the code)
+## Confirmed state (read from the code)
 
-1. `android/app/src/main/AndroidManifest.xml` — the https intent filter has
-   `autoVerify="false"` and only covers `/community/invite` and `/customer/verify`,
-   so links to product/category/other pages never open the app.
-2. There is no `public/.well-known/assetlinks.json` anywhere, so App Links domain
-   verification cannot succeed.
-3. Inside the app, admin-entered links open the system browser:
-   `BannerCarousel` uses `target="_blank"` on the banner `link_url`,
-   `NotificationPopup` / `NotificationDetailDialog` use `window.open(link_url, "_blank")`,
-   and `OfferFlashPopup` uses `window.open(linkUrl, "_blank")`. When those admin
-   values point at internal pages (`/product/...`, `/category/...`), the app opens
-   them in Chrome instead of its own screens.
-4. The `appUrlOpen` handler in `src/lib/native.ts` routes same-origin links in-app
-   but has no protection against the same link being delivered twice.
+- `ProductDetail.tsx` (line ~346) and `PennyPrime.tsx` (line ~210) share the Supabase `product-og` URL, so WhatsApp taps land on `supabase.co` — a domain the app is not registered for. The function later redirects to the site, but Android 12+ does not auto-handoff browser redirects to the app.
+- `AndroidManifest.xml` registers only `www.pennyekart.com`; a `pennyekart.com` (apex) link never matches.
+- All shared links are built from `window.location.origin` (community invite in `CommunityCard.tsx`, referral in `InviteFriendDialog.tsx`, verification in `VerifyAccountCard.tsx`, product links). On the apex domain or in a dev build this puts the wrong host in the shared link.
+- WhatsApp's preview bot gets per-product OG tags only from the Supabase function today; the SPA (`index.html`) has generic site-level OG tags.
 
 ## Changes
 
-### 1. Manifest (needs a new APK/AAB build to take effect)
+### 1. Canonical share links (src/lib/appLinks.ts + call sites)
 
-- Set `android:autoVerify="true"` on the https intent filter.
-- Add `pathPrefix` entries only for the agreed routes: `/product` (list + details),
-  `/category`, `/community` (keeps existing invite handling), and `/customer/verify`
-  (kept as-is). No other routes — wallet, profile, cart, and unrelated pages are
-  NOT added, so the filter cannot intercept unrelated URLs.
-- Preserve existing query parameters; do not change the package ID.
+- Add `SITE_URL = "https://www.pennyekart.com"` (canonical, always www) and
+  `productShareLink(productId, coupon?)` returning
+  `https://www.pennyekart.com/product/<id>` with `?coupon=<code>` only when a
+  coupon is passed.
+- Use it in `ProductDetail.tsx` (share button — replaces the Supabase OG URL;
+  the unused `?source=seller_product` fallback URL is dropped) and
+  `PennyPrime.tsx` (WhatsApp deal share, keeps the coupon code as `?coupon=`).
+- Pass `SITE_URL` instead of `window.location.origin` to `communityInviteLink`
+  in `CommunityCard.tsx`, and use `SITE_URL` as the base for the referral link
+  in `InviteFriendDialog.tsx` and the verification link in
+  `VerifyAccountCard.tsx` — all are WhatsApp-shared links, and
+  `appLinks.ts` is the single home for them per the existing architecture rule.
+- Website visitors who tap a shared link still open the normal web product
+  page; nothing about in-browser behaviour changes.
 
-### 2. Domain verification file
+### 2. Product OG tags served on the real route (vercel.json)
 
-- Create `public/.well-known/assetlinks.json` with package `com.pennyekart.app`
-  and an empty sha256 value — no invented or placeholder fingerprint is shipped.
-- Document loudly in `PLAY_STORE_CHECKLIST.md`: the real Play App Signing SHA-256
-  (Play Console → Setup → App signing) must be filled into that file and the site
-  redeployed before App Links verification can succeed (Vercel serves `public/`
-  files before rewrites, so the file goes live with the deploy).
-- Until the real fingerprint is deployed, verification fails and Android shows a
-  chooser instead of silently opening the browser — same or better than today.
+- Add a rewrite ABOVE the SPA catch-all that serves bots the per-product OG
+  page on the shared URL itself:
+  `source: "/product/:id"`, `has: [{ "type": "header", "key": "user-agent",
+  "value": "<same bot regex as product-og's BOT_UA_PATTERN>" }]`,
+  destination: the Supabase `product-og` function with
+  `?id=:id&site_url=https://www.pennyekart.com`.
+- Human requests don't match the header condition, so they keep loading the
+  SPA product page — no redirect, no loop. WhatsApp's crawler gets real
+  product title/price/image, and a real user tap opens the app directly
+  (verified App Links), never through a redirect.
+- `?coupon=...` query params are preserved and still reach the function.
 
-### 3. One shared link resolver for admin-entered links
+### 3. Manifest: register the apex host (needs a new APK/AAB)
 
-- New helper in `src/lib/appLinks.ts` (or a sibling module): `resolveInternalLink(url)`
-  returns an in-app route ONLY for internal links on the canonical host
-  (`www.pennyekart.com`) plus explicitly approved same-site hosts. It accepts bare
-  paths (`/product/1`), full site URLs (`https://www.pennyekart.com/product/1`),
-  tolerates trailing slashes and encoded paths, and returns `null` for everything
-  else — protocol-relative URLs (`//evil.example`), unsafe schemes
-  (`javascript:`, `data:`), lookalike domains (`pennyekart.com.evil.io`,
-  `notpennyekart.com`), and genuinely external URLs (wa.me, Play Store, maps).
-- BannerCarousel, NotificationPopup, NotificationDetailDialog, OfferFlashPopup
-  (and ScratchRewards product coupon links, which already navigate — verify only)
-  use it: internal → React Router navigation inside the app; external → unchanged
-  `window.open` / `target="_blank"`.
-- On the website the same helper keeps normal browser behaviour — no automatic
-  redirect of website visitors into the app.
+- In `AndroidManifest.xml`, add four more `<data>` elements with
+  `android:host="pennyekart.com"` for the same path prefixes
+  (`/product`, `/category`, `/community`, `/customer/verify`). Both hosts
+  must be listed explicitly — Android treats them as different domains.
+- Keep `www.pennyekart.com` entries untouched; no other routes added.
 
-### 4. appUrlOpen hardening in src/lib/native.ts
+### 4. Play Store checklist + docs
 
-- Cold start and already-running deliveries both route to the linked screen;
-  a repeated identical URL within a short window is deduped without suppressing
-  legitimate subsequent navigation.
-- Malformed or cross-origin links: current behaviour kept (same-origin pushState,
-  external opens in place); nothing crashes on bad input.
+- `PLAY_STORE_CHECKLIST.md`: add the steps the audit called out — confirm
+  `https://pennyekart.com/.well-known/assetlinks.json` is reachable on the
+  apex host too (each host is verified separately), rebuild the app with the
+  new manifest, and the manual device checks (Open by default settings, test
+  WhatsApp tap, cold start vs already open, `adb shell pm verify-app-links`).
+- `AGENTS.md`: record that WhatsApp-shared links always use the canonical
+  `SITE_URL` from appLinks (never `window.location.origin`).
+- `roadmap.md`: record this task as done once verified.
 
-## Out of scope (per the brief)
+## Out of scope
 
-Package ID, auth system, database schema, payments/wallet/orders/seller/delivery/
-admin logic, Firebase setup — all untouched. Website behaviour for normal
-browsers unchanged.
+Signing keys, package ID, auth/database, payments, the `product-og` function
+logic (only its call sites change), Firebase. Website behaviour unchanged.
 
 ## Verification
 
-- Unit tests for the link resolver: valid internal path, full site URL with query
-  parameters, external URL, `//`-prefixed unsafe path, unsafe schemes
-  (`javascript:`), lookalike domains, malformed URLs. Plus an appUrlOpen-style
-  dedupe test (repeat suppressed, later different link not suppressed). Run
-  `bun run test`.
+- `bunx vitest run src/lib/appLinks.test.ts` — new tests assert
+  `productShareLink("abc")` → `https://www.pennyekart.com/product/abc`,
+  with a coupon → `.../product/abc?coupon=CODE`; existing tests stay green.
 - Production build clean (observability build log).
-- Playwright check: banner/notification-style internal links navigate in-app on
-  the web preview; external links still open a new tab.
-- Reported as manual Android-only steps: add the real Play App Signing SHA-256 to
-  `assetlinks.json` and redeploy, `git pull` + `npx cap sync`, build a new
-  APK/AAB, install, and test (a) tapping a product link from WhatsApp,
-  (b) cold start vs app already open, (c) domain verification of
-  `https://www.pennyekart.com/.well-known/assetlinks.json`. App Links
-  verification is NOT claimed done until tested on a device.
+- Cannot be verified here: Vercel header-condition rewrite behaviour and
+  Android App Links verification — the live domain is deployed outside this
+  workspace and a signed build/device is needed. These become explicit
+  checklist steps: redeploy, then confirm `https://www.pennyekart.com/product/<id>`
+  returns OG HTML for a WhatsApp user-agent and app HTML for a normal browser,
+  then a new APK/AAB and device testing per the checklist.
