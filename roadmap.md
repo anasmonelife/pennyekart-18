@@ -9,6 +9,7 @@
 - [x] public/.well-known/assetlinks.json created with empty fingerprint; PLAY_STORE_CHECKLIST.md documents filling the real Play App Signing SHA-256 and redeploying.
 - [x] resolveInternalLink in src/lib/appLinks.ts shared by BannerCarousel, NotificationPopup, NotificationDetailDialog and OfferFlashPopup — internal links navigate in-app, external keep new-tab behaviour.
 - [x] appUrlOpen dedupe (shouldOpenDeepLink) for repeated identical deliveries; tests added.
+- [x] Verified: full suite passes (104 tests, incl. resolver, dedupe and banner-link tests), production build OK, and Playwright confirms the preview loads clean.
 - [ ] Takes effect on devices after the next APK/AAB build and Play Store update (blocked: native build is done outside this project).
 
 
