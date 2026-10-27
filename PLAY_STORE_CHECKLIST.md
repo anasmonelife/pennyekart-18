@@ -29,44 +29,61 @@ INTERNET, ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, POST_NOTIFICATIONS, RECO
 No background location, contacts, SMS, phone or broad storage permissions.
 
 ## App Links (deep links) — REQUIRED before links auto-open the app
-**The https intent filter in `AndroidManifest.xml` is now `autoVerify="true"` for
-`/product`, `/category`, `/community` and `/customer/verify` on BOTH
-www.pennyekart.com and pennyekart.com (Android treats the two hosts as
-different domains, so each is registered explicitly). Verification CANNOT
-succeed until the steps below are done — until then Android shows a chooser
-instead of auto-opening (same or better than before). The manifest change only
-takes effect after a new APK/AAB build.**
+**Android verifies App Links per HOST. `www.pennyekart.com` is the canonical
+auto-verified host (`autoVerify="true"` in `AndroidManifest.xml`, covering
+`/product`, `/category`, `/community` and `/customer/verify`).
+`pennyekart.com` (apex) 308-redirects to `www`, so Google's Digital Asset
+Links fetcher fails on it (ERROR_CODE_REDIRECT); the apex host therefore sits
+in a separate standard browsable intent filter WITHOUT `autoVerify` and is
+NOT part of automatic verification while that redirect remains. The manifest
+change only takes effect after a new APK/AAB build — a successful build is
+NOT successful Android domain verification.**
 
-- [x] Play App Signing SHA-256 pasted into `public/.well-known/assetlinks.json`
+- [x] Play App Signing SHA-256 listed in `public/.well-known/assetlinks.json`
       (Play Console → Setup → App signing):
       `7C:D9:28:BC:EA:04:8D:DF:2F:17:19:18:2F:E9:93:15:95:9E:D6:C9:E0:D7:CA:1E:2D:8C:21:D0:B7:02:CD:B2`
-- [ ] Redeploy the website so the updated `assetlinks.json` is live
-      (`public/` files are served before rewrites, so it goes live with the deploy)
-- [ ] Check `https://www.pennyekart.com/.well-known/assetlinks.json` in a
-      browser shows the real fingerprint — as of 2026-10-27 the live URL
-      returns HTTP 200 but serves the app HTML (deployed build predates the
-      file), so Android cannot verify yet
-- [ ] Check `https://pennyekart.com/.well-known/assetlinks.json` (apex, no
-      www) also returns the JSON — Android verifies each host separately. If
-      the apex 301-redirects to www, confirm the Digital Asset Links fetcher
-      still succeeds (`adb shell pm get-app-links` shows the host as verified);
-      otherwise serve the file on the apex too.
-- [ ] Confirm product share links now point at the site itself: shared URLs
-      are `https://www.pennyekart.com/product/<id>` (optionally `?coupon=`).
+      — the certificate Google re-signs releases with; it verifies app
+      installs from Google Play.
+- [x] Local test APK SHA-256 also listed in `assetlinks.json`:
+      `45:31:D7:3A:FD:A8:00:FC:B0:B8:17:44:87:F6:43:69:47:2B:40:52:CB:13:22:0E:99:1B:C8:D2:E7:2F:76:88`
+      — the certificate side-loaded local test builds are signed with; it lets
+      App Links verification succeed for local test installs. Keep BOTH
+      fingerprints listed; never replace the Play one with the test one, and
+      never confuse either with the upload key.
+- [ ] Redeploy the website so the updated `assetlinks.json` is live: commit
+      and push, and Vercel serves it on the next production deploy (`public/`
+      files are served before rewrites). Confirm at
+      https://www.pennyekart.com/.well-known/assetlinks.json — as of
+      2026-10-27 the live URL returns HTTP 200 but serves app HTML (the
+      deployed build predates the file), so Android cannot verify yet.
+- [ ] Confirm product share links point at the site itself:
+      `https://www.pennyekart.com/product/<id>` (optionally `?coupon=`).
       After redeploy, request that URL with a WhatsApp user-agent — it must
       return OG HTML (via the vercel.json bot rewrite to product-og); a normal
       browser user-agent must still get the app SPA. Previous Supabase
       `product-og` links already shared keep working.
-- [ ] On a device: rebuild the app (`git pull`, `npx cap sync android`, new
-      APK/AAB), then test (a) a product link from WhatsApp, (b) a community
-      invite link from WhatsApp, (c) cold start vs app already open,
-      (d) `adb shell pm verify-app-links --re-verify com.pennyekart.app` and
-      `adb shell pm get-app-links com.pennyekart.app`.
-- [ ] If the installed build was side-loaded/debug-signed (Android Studio Run),
-      App Links verification fails — the phone's certificate won't match the
-      Play signing key. Install from Play, or temporarily enable the link
-      manually: Settings → Apps → Pennyekart → Open by default →
-      "Open supported links" + check both web addresses.
+- [ ] On a real device, verify App Links (a successful build is NOT successful
+      domain verification):
+      1. `git pull origin main && npm install && npm run build && npx cap sync android`
+      2. Build and install a signed local test APK using the project's Android
+         configuration (or install from Play for the Play signing certificate).
+      3. `adb shell pm verify-app-links --re-verify com.pennyekart.app`
+      4. Wait for verification, then
+         `adb shell pm get-app-links com.pennyekart.app`
+         — expected: `www.pennyekart.com: verified`.
+- [ ] Test the four routes on a real device (browser or WhatsApp), cold start
+      and with the app already open — the app must open the matching route on
+      the live website:
+      - `https://www.pennyekart.com/product/<real-product-id>`
+      - `https://www.pennyekart.com/category/<real-category-id>`
+      - `https://www.pennyekart.com/community/<real-community-id>`
+      - `https://www.pennyekart.com/customer/verify/<real-code>`
+      Also confirm wallet/profile/cart URLs still open in the browser, not the
+      app.
+- [ ] If the installed build was side-loaded with a key that matches NEITHER
+      fingerprint above, verification fails — enable the link manually:
+      Settings → Apps → Pennyekart → Open by default → "Open supported links"
+      + check www.pennyekart.com.
 
 ## Before uploading
 - [ ] `git pull`, `npm install`, `npm run build`, `npx cap sync android`
