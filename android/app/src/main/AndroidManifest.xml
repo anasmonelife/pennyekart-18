@@ -18,51 +18,40 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Pennyekart app links: auto-verified against
-                 https://www.pennyekart.com/.well-known/assetlinks.json (the
-                 real Play App Signing SHA-256 must be filled in there before
-                 verification succeeds; see PLAY_STORE_CHECKLIST.md). Covers
-                 only product, category, community and customer-verify routes —
-                 wallet/profile/cart URLs must never be intercepted. Android
-                 treats www.pennyekart.com and pennyekart.com as different
-                 domains, so BOTH hosts are registered explicitly; the apex
-                 host must also serve /assetlinks.json (see checklist). -->
+            <!-- Pennyekart app links. Canonical host: www.pennyekart.com is the only
+                 auto-verified host (autoVerify="true"); it is verified against
+                 https://www.pennyekart.com/.well-known/assetlinks.json (both
+                 the Play App Signing and local test APK SHA-256 must be listed
+                 there; see PLAY_STORE_CHECKLIST.md). Covers only product,
+                 category, community and customer-verify routes - wallet/
+                 profile/cart URLs must never be intercepted. The apex host
+                 redirects to www with HTTP 308, which makes Google's Digital
+                 Asset Links fetcher fail (ERROR_CODE_REDIRECT), so
+                 pennyekart.com lives in a separate standard browsable filter
+                 WITHOUT autoVerify: it can still be enabled manually per
+                 device, but is never part of automatic domain verification.
+                 Manifest changes only take effect after a new APK/AAB build. -->
+            <!-- Canonical host: www.pennyekart.com (auto-verified) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="https"
-                    android:host="www.pennyekart.com"
-                    android:pathPrefix="/product" />
-                <data
-                    android:scheme="https"
-                    android:host="www.pennyekart.com"
-                    android:pathPrefix="/category" />
-                <data
-                    android:scheme="https"
-                    android:host="www.pennyekart.com"
-                    android:pathPrefix="/community" />
-                <data
-                    android:scheme="https"
-                    android:host="www.pennyekart.com"
-                    android:pathPrefix="/customer/verify" />
-                <data
-                    android:scheme="https"
-                    android:host="pennyekart.com"
-                    android:pathPrefix="/product" />
-                <data
-                    android:scheme="https"
-                    android:host="pennyekart.com"
-                    android:pathPrefix="/category" />
-                <data
-                    android:scheme="https"
-                    android:host="pennyekart.com"
-                    android:pathPrefix="/community" />
-                <data
-                    android:scheme="https"
-                    android:host="pennyekart.com"
-                    android:pathPrefix="/customer/verify" />
+                <data android:scheme="https" android:host="www.pennyekart.com" android:pathPrefix="/product" />
+                <data android:scheme="https" android:host="www.pennyekart.com" android:pathPrefix="/category" />
+                <data android:scheme="https" android:host="www.pennyekart.com" android:pathPrefix="/community" />
+                <data android:scheme="https" android:host="www.pennyekart.com" android:pathPrefix="/customer/verify" />
+            </intent-filter>
+            <!-- Apex host: pennyekart.com (browsable only, NOT auto-verified;
+                 308-redirects to www, so Digital Asset Links verification
+                 cannot succeed for it) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="pennyekart.com" android:pathPrefix="/product" />
+                <data android:scheme="https" android:host="pennyekart.com" android:pathPrefix="/category" />
+                <data android:scheme="https" android:host="pennyekart.com" android:pathPrefix="/community" />
+                <data android:scheme="https" android:host="pennyekart.com" android:pathPrefix="/customer/verify" />
             </intent-filter>
         </activity>
 
