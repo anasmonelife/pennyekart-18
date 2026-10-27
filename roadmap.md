@@ -1,5 +1,12 @@
 # Roadmap
 
+## Shared WhatsApp links open the installed Android app
+- [x] Product share links (product detail + Penny Prime coupon share) share `https://www.pennyekart.com/product/<id>` on the canonical SITE_URL instead of the Supabase product-og URL; community invite, referral and verification links also build on SITE_URL, not window.location.origin.
+- [x] WhatsApp previews keep real product OG tags: vercel.json rewrites /product/:id to product-og only for bot user-agents, so humans still get the SPA and app taps never pass through a redirect.
+- [x] Manifest registers pennyekart.com (apex) as well as www.pennyekart.com for /product, /category, /community, /customer/verify; PLAY_STORE_CHECKLIST updated (apex assetlinks check, debug-build note, device test steps).
+- [x] Verified: appLinks tests (productShareLink + canonical SITE_URL) pass; production build OK.
+- [ ] Takes effect after redeploying the site and the next APK/AAB build + device test (blocked: deploy and native build are done outside this project).
+
 ## Invite links open the invite screen in the installed app
 - [x] Android browser redirect tries the app first (intent:// with Play Store fallback) and keeps "Continue in browser".
 - [x] Android app accepts https links (manifest intent filter for /community/invite and /customer/verify) and routes the web view to the linked screen via appUrlOpen.

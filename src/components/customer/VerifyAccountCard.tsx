@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { SITE_URL } from "@/lib/appLinks";
 import {
   buildVerificationLink,
   canSendVerificationLink,
@@ -163,7 +164,7 @@ const VerifyAccountCard = ({ userId, profileMobile, isSuperAdmin = false }: Prop
       toast.error(serverErr || "Could not create the verification link. Please try again.");
       return;
     }
-    const link = buildVerificationLink(window.location.origin, token);
+    const link = buildVerificationLink(SITE_URL, token);
     const waUrl = `https://wa.me/91${entered}?text=${encodeURIComponent(verificationWhatsAppMessage(link))}`;
     window.open(waUrl, "_blank");
     setSentLink({ mobile: entered, waUrl });

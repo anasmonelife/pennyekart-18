@@ -23,7 +23,10 @@
                  real Play App Signing SHA-256 must be filled in there before
                  verification succeeds; see PLAY_STORE_CHECKLIST.md). Covers
                  only product, category, community and customer-verify routes —
-                 wallet/profile/cart URLs must never be intercepted. -->
+                 wallet/profile/cart URLs must never be intercepted. Android
+                 treats www.pennyekart.com and pennyekart.com as different
+                 domains, so BOTH hosts are registered explicitly; the apex
+                 host must also serve /assetlinks.json (see checklist). -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -43,6 +46,22 @@
                 <data
                     android:scheme="https"
                     android:host="www.pennyekart.com"
+                    android:pathPrefix="/customer/verify" />
+                <data
+                    android:scheme="https"
+                    android:host="pennyekart.com"
+                    android:pathPrefix="/product" />
+                <data
+                    android:scheme="https"
+                    android:host="pennyekart.com"
+                    android:pathPrefix="/category" />
+                <data
+                    android:scheme="https"
+                    android:host="pennyekart.com"
+                    android:pathPrefix="/community" />
+                <data
+                    android:scheme="https"
+                    android:host="pennyekart.com"
                     android:pathPrefix="/customer/verify" />
             </intent-filter>
         </activity>

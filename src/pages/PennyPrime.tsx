@@ -11,6 +11,7 @@ import { ArrowLeft, Tag, Users, Share2, Copy, CheckCheck, Handshake, ShoppingCar
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import pennyPrimeLogo from "@/assets/penny-prime-logo.jpg";
+import { SITE_URL, productShareLink } from "@/lib/appLinks";
 
 interface CouponListing {
   id: string;
@@ -207,8 +208,8 @@ const PennyPrime = () => {
         ? `${c.customer_discount_value}% off`
         : `₹${c.customer_discount_value} off`;
     const productLink = product?.id
-      ? `https://xxlocaexuoowxdzupjcs.supabase.co/functions/v1/product-og?id=${product.id}&site_url=${encodeURIComponent(window.location.origin)}&coupon=${encodeURIComponent(shareCode)}`
-      : window.location.origin;
+      ? productShareLink(product.id, shareCode)
+      : SITE_URL;
     const priceLine = product && product.mrp > product.price
       ? `\n💲 MRP: ₹${product.mrp} → Now: ₹${product.price}`
       : product ? `\n💲 Price: ₹${product.price}` : "";

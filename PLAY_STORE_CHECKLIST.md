@@ -30,10 +30,12 @@ No background location, contacts, SMS, phone or broad storage permissions.
 
 ## App Links (deep links) — REQUIRED before links auto-open the app
 **The https intent filter in `AndroidManifest.xml` is now `autoVerify="true"` for
-`/product`, `/category`, `/community` and `/customer/verify` on
-www.pennyekart.com. Verification CANNOT succeed until the steps below are done —
-until then Android shows a chooser instead of auto-opening (same or better than
-before). The manifest change only takes effect after a new APK/AAB build.**
+`/product`, `/category`, `/community` and `/customer/verify` on BOTH
+www.pennyekart.com and pennyekart.com (Android treats the two hosts as
+different domains, so each is registered explicitly). Verification CANNOT
+succeed until the steps below are done — until then Android shows a chooser
+instead of auto-opening (same or better than before). The manifest change only
+takes effect after a new APK/AAB build.**
 
 - [x] Play App Signing SHA-256 pasted into `public/.well-known/assetlinks.json`
       (Play Console → Setup → App signing):
@@ -44,10 +46,27 @@ before). The manifest change only takes effect after a new APK/AAB build.**
       browser shows the real fingerprint — as of 2026-10-27 the live URL
       returns HTTP 200 but serves the app HTML (deployed build predates the
       file), so Android cannot verify yet
+- [ ] Check `https://pennyekart.com/.well-known/assetlinks.json` (apex, no
+      www) also returns the JSON — Android verifies each host separately. If
+      the apex 301-redirects to www, confirm the Digital Asset Links fetcher
+      still succeeds (`adb shell pm get-app-links` shows the host as verified);
+      otherwise serve the file on the apex too.
+- [ ] Confirm product share links now point at the site itself: shared URLs
+      are `https://www.pennyekart.com/product/<id>` (optionally `?coupon=`).
+      After redeploy, request that URL with a WhatsApp user-agent — it must
+      return OG HTML (via the vercel.json bot rewrite to product-og); a normal
+      browser user-agent must still get the app SPA. Previous Supabase
+      `product-og` links already shared keep working.
 - [ ] On a device: rebuild the app (`git pull`, `npx cap sync android`, new
-      APK/AAB), then test (a) a product link from WhatsApp, (b) cold start vs
-      app already open, (c) `adb shell pm verify-app-links --re-verify
-      com.pennyekart.app` and `adb shell pm get-app-links com.pennyekart.app`
+      APK/AAB), then test (a) a product link from WhatsApp, (b) a community
+      invite link from WhatsApp, (c) cold start vs app already open,
+      (d) `adb shell pm verify-app-links --re-verify com.pennyekart.app` and
+      `adb shell pm get-app-links com.pennyekart.app`.
+- [ ] If the installed build was side-loaded/debug-signed (Android Studio Run),
+      App Links verification fails — the phone's certificate won't match the
+      Play signing key. Install from Play, or temporarily enable the link
+      manually: Settings → Apps → Pennyekart → Open by default →
+      "Open supported links" + check both web addresses.
 
 ## Before uploading
 - [ ] `git pull`, `npm install`, `npm run build`, `npx cap sync android`
