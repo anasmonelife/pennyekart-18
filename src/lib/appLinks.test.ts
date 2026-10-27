@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  SITE_URL,
   androidAppIntentUrl,
   communityInviteLink,
   communityInviteWhatsAppMessage,
+  productShareLink,
   resetDeepLinkDedupe,
   resolveInternalLink,
   resolveLinkDevice,
@@ -16,6 +18,23 @@ const IPHONE_UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
 const DESKTOP_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
+
+describe("product share link", () => {
+  it("shares the canonical site URL, not the Supabase OG function", () => {
+    expect(productShareLink("abc-1")).toBe("https://www.pennyekart.com/product/abc-1");
+    expect(productShareLink("abc-1")).not.toContain("supabase");
+  });
+
+  it("keeps a coupon code as a query parameter", () => {
+    expect(productShareLink("abc-1", "PRIME10")).toBe(
+      "https://www.pennyekart.com/product/abc-1?coupon=PRIME10",
+    );
+  });
+
+  it("exposes the canonical https origin for other shared links", () => {
+    expect(SITE_URL).toBe("https://www.pennyekart.com");
+  });
+});
 
 describe("resolveLinkDevice", () => {
   it("routes the native shell straight to the app", () => {

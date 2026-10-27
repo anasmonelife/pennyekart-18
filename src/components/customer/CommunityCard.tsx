@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { communityInviteLink, communityInviteWhatsAppMessage, whatsappShareUrl } from "@/lib/appLinks";
+import { SITE_URL, communityInviteLink, communityInviteWhatsAppMessage, whatsappShareUrl } from "@/lib/appLinks";
 
 interface Props {
   userId: string;
@@ -123,7 +123,7 @@ const CommunityCard = ({ userId }: Props) => {
   };
 
   const shareInvite = (inviteId: string) => {
-    const link = communityInviteLink(window.location.origin, inviteId);
+    const link = communityInviteLink(SITE_URL, inviteId);
     const message = communityInviteWhatsAppMessage(community?.name ?? "our", link);
     window.open(whatsappShareUrl(message), "_blank", "noopener,noreferrer");
   };

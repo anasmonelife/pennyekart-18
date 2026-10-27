@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Copy, Check, Share2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { SITE_URL } from "@/lib/appLinks";
 import logo from "@/assets/logo.png";
 import inviteImg from "@/assets/invite-earnings.png";
 
@@ -37,7 +38,7 @@ const InviteFriendDialog = ({ open, onOpenChange }: InviteFriendDialogProps) => 
   }, [open, user]);
 
   const referralLink = referralCode
-    ? `${window.location.origin}/customer/signup?ref=${referralCode}`
+    ? `${SITE_URL}/customer/signup?ref=${referralCode}`
     : "";
 
   const handleCopy = async () => {

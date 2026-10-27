@@ -8,6 +8,25 @@
 export const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.pennyekart.app&pcampaignid=web_share";
 
+/**
+ * Canonical https origin used for every link shared outside the app
+ * (WhatsApp, invite, referral, verification, product). Never build shared
+ * links from window.location.origin — the app can be viewed on the apex
+ * domain or a dev host, and Android verifies each host separately.
+ */
+export const SITE_URL = "https://www.pennyekart.com";
+
+/**
+ * Shareable product link on the canonical domain. A verified Android App
+ * Links install opens it directly in the app, and WhatsApp previews get the
+ * real product OG tags (Vercel serves the product-og function to bots on
+ * this exact route).
+ */
+export const productShareLink = (productId: string, coupon?: string): string =>
+  coupon
+    ? `${SITE_URL}/product/${productId}?coupon=${encodeURIComponent(coupon)}`
+    : `${SITE_URL}/product/${productId}`;
+
 export type LinkDevice = "app" | "mobile_browser" | "desktop";
 
 export const resolveLinkDevice = (isNative: boolean, userAgent: string): LinkDevice => {
