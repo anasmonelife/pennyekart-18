@@ -38,3 +38,56 @@ export const communityInviteWhatsAppMessage = (communityName: string, link: stri
 /** Opens the WhatsApp app/site with a pre-filled share message. */
 export const whatsappShareUrl = (message: string): string =>
   `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+/** Hosts whose links may be opened inside the app. Never wildcard. */
+export const SITE_HOSTS = ["www.pennyekart.com", "pennyekart.com"];
+
+/**
+ * Resolves an admin-entered link to an in-app route, or null when it must open
+ * outside the app. Accepts bare paths ("/product/1"), full site URLs
+ * ("https://www.pennyekart.com/product/1"), tolerates trailing slashes, and
+ * preserves query parameters. Returns null for everything else —
+ * protocol-relative URLs ("//evil.example"), unsafe schemes ("javascript:",
+ * "data:"), lookalike domains ("pennyekart.com.evil.io"), and genuinely
+ * external URLs (wa.me, Play Store, maps).
+ */
+export const resolveInternalLink = (url: string): string | null => {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (!trimmed || trimmed.startsWith("//")) return null;
+  if (trimmed.startsWith("/")) {
+    // Bare in-app path; collapse a trailing slash, keep query/hash as-is.
+    return trimmed.length > 1 ? trimmed.replace(/\/+$/, "") || "/" : trimmed;
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+  if (!SITE_HOSTS.includes(parsed.hostname.toLowerCase())) return null;
+  const path = parsed.pathname.replace(/\/+$/, "") || "/";
+  return `${path}${parsed.search}${parsed.hash}`;
+};
+
+// ---------- appUrlOpen dedupe ----------
+// Android can deliver the same appUrlOpen link twice (cold start + listener
+// attach). Suppress a repeated identical URL within a short window without
+// suppressing legitimate later navigation.
+
+let lastDeepLink: { url: string; at: number } | null = null;
+const DEEP_LINK_DEDUPE_MS = 1500;
+
+export const shouldOpenDeepLink = (url: string, now: number = Date.now()): boolean => {
+  if (lastDeepLink && lastDeepLink.url === url && now - lastDeepLink.at < DEEP_LINK_DEDUPE_MS) {
+    return false;
+  }
+  lastDeepLink = { url, at: now };
+  return true;
+};
+
+/** Test hook: clears dedupe state. */
+export const resetDeepLinkDedupe = () => {
+  lastDeepLink = null;
+};
