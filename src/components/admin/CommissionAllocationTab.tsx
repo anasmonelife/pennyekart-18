@@ -64,6 +64,8 @@ export default function CommissionAllocationTab({ roles, rules, fallbackRate, re
   const [roleFilter, setRoleFilter] = useState("all");
   const [openRole, setOpenRole] = useState<string | null>(null);
   const [openPerson, setOpenPerson] = useState<string | null>(null);
+  const [openTable, setOpenTable] = useState(true);
+  const [openReport, setOpenReport] = useState(false);
 
   const pennyRoleId = useCallback(
     (role: string) => roles.find((r) => normalizeRoleName(r.name) === normalizeRoleName(role))?.id ?? null,
