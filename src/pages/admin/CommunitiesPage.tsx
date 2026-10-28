@@ -110,6 +110,11 @@ const CommunitiesPage = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [memberLoading, setMemberLoading] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<SummaryRow | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<SummaryRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const range = useMemo(() => resolveRange(period, customFrom, customTo), [period, customFrom, customTo]);
   const pct = Number(commission) || 0;
