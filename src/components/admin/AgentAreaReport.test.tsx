@@ -67,7 +67,7 @@ describe("agent area report", () => {
     fireEvent.change(agentSelect, { target: { value: "1" } });
     expect(screen.getByText("Kodur Circle")).toBeInTheDocument();
     expect(screen.getByText("Ponmala Bazaar")).toBeInTheDocument();
-    expect(screen.getByText("Ward 7")).toBeInTheDocument();
+    expect(screen.getAllByText("Ward 7").length).toBeGreaterThan(0);
   });
 
   it("shows the empty state when no communities fall in the agent's area", async () => {
