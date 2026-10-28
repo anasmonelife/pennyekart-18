@@ -4,6 +4,7 @@ import CommunityAccessRequests from "@/components/admin/CommunityAccessRequests"
 import CommissionAllocationTab from "@/components/admin/CommissionAllocationTab";
 import CommunityReportingTab from "@/components/admin/CommunityReportingTab";
 import CommunityPayoutRequests from "@/components/admin/CommunityPayoutRequests";
+import AgentAreaReport from "@/components/admin/AgentAreaReport";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -343,7 +344,8 @@ const CommunitiesPage = () => {
           <TabsContent value="allocation">
             <CommissionAllocationTab roles={roles} rules={rules} fallbackRate={pct} ready={settingsLoaded && rolesLoaded} />
           </TabsContent>
-          <TabsContent value="reporting">
+          <TabsContent value="reporting" className="space-y-6">
+            <AgentAreaReport />
             <CommunityReportingTab />
           </TabsContent>
           <TabsContent value="payouts">
