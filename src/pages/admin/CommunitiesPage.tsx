@@ -264,6 +264,35 @@ const CommunitiesPage = () => {
     void loadMembers(row);
   };
 
+  const openRename = (row: SummaryRow) => {
+    setRenameTarget(row);
+    setRenameValue(row.community_name);
+  };
+
+  const submitRename = async () => {
+    const name = renameValue.trim();
+    if (!renameTarget || !name) { toast.error("Enter a community name"); return; }
+    setRenaming(true);
+    const { error } = await rpc("admin_rename_community", { _community_id: renameTarget.community_id, _new_name: name });
+    setRenaming(false);
+    if (error) { toast.error(error.message.replace(/^.*?:\s*/, "")); return; }
+    setRenameTarget(null);
+    toast.success("Community renamed");
+    void load();
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { error } = await rpc("admin_delete_community", { _community_id: deleteTarget.community_id });
+    setDeleting(false);
+    if (error) { toast.error(error.message.replace(/^.*?:\s*/, "")); return; }
+    setDeleteTarget(null);
+    if (expandedId === deleteTarget.community_id) setExpandedId(null);
+    toast.success("Community deleted");
+    void load();
+  };
+
   const totals = useMemo(() => {
     const revenue = rows.reduce((s, r) => s + r.revenue, 0);
     const profit = rows.reduce((s, r) => s + r.profit, 0);
