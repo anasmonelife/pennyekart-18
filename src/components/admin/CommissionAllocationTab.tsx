@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Loader2, RefreshCw, MapPin, Download, ChevronRight, ChevronDown, ShieldCheck, Users } from "lucide-react";
+import { Loader2, RefreshCw, MapPin, Download, ChevronRight, ChevronDown, ShieldCheck, Users, Table2, MapPinned, IndianRupee } from "lucide-react";
 import { commissionRateForRole, type CommissionRule } from "@/lib/communityCommission";
 import CommunityCommissionTable from "./CommunityCommissionTable";
 import AgentAreaReport from "./AgentAreaReport";
+import SectionCard from "./SectionCard";
 import { groupAllocationsByRole, normalizeRoleName, roleLabel, type AllocationPerson } from "@/lib/elifeAllocation";
 import {
   buildAllocation, periodRange, type AllocatedPerson, type AllocationPeriod,
@@ -28,21 +27,6 @@ interface Props {
 const SNAPSHOTS = "commission_allocation_snapshots";
 // The snapshots table is newer than the generated client types.
 const db = supabase as unknown as { from: (t: string) => any; rpc: (fn: string, a?: Record<string, unknown>) => any };
-
-/** Collapsible section header used for the allocation table and agent area report. */
-function CollapseSection({
-  title, open, onOpenChange, children,
-}: { title: string; open: boolean; onOpenChange: (o: boolean) => void; children: React.ReactNode }) {
-  return (
-    <Collapsible open={open} onOpenChange={onOpenChange}>
-      <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 rounded-lg border bg-card px-4 py-3 text-left shadow-sm transition-colors hover:bg-accent/40">
-        <span className="text-sm font-semibold">{title}</span>
-        <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="pt-4">{children}</CollapsibleContent>
-    </Collapsible>
-  );
-}
 
 const money = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
@@ -64,8 +48,7 @@ export default function CommissionAllocationTab({ roles, rules, fallbackRate, re
   const [roleFilter, setRoleFilter] = useState("all");
   const [openRole, setOpenRole] = useState<string | null>(null);
   const [openPerson, setOpenPerson] = useState<string | null>(null);
-  const [openTable, setOpenTable] = useState(true);
-  const [openReport, setOpenReport] = useState(false);
+  const [openSection, setOpenSection] = useState<"table" | "report" | "allocation" | null>(null);
 
   const pennyRoleId = useCallback(
     (role: string) => roles.find((r) => normalizeRoleName(r.name) === normalizeRoleName(role))?.id ?? null,
