@@ -58,6 +58,7 @@ describe("agent area report", () => {
     // Coordinators cover only their responsible ward inside the panchayath.
     expect(screen.getByText("Kodur Circle")).toBeInTheDocument();
     expect(screen.queryByText("Ponmala Bazaar")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Ward 7").length).toBeGreaterThan(0);
     const rows = screen.getAllByRole("row");
     expect(within(rows[rows.length - 1]).getByText("₹500")).toBeInTheDocument();
     expect(mocks.invoke).toHaveBeenCalledWith("elife-role-allocations");
@@ -67,7 +68,7 @@ describe("agent area report", () => {
     fireEvent.change(agentSelect, { target: { value: "1" } });
     expect(screen.getByText("Kodur Circle")).toBeInTheDocument();
     expect(screen.getByText("Ponmala Bazaar")).toBeInTheDocument();
-    expect(screen.getAllByText("Ward 7").length).toBeGreaterThan(0);
+    expect(screen.getByText("Kodur · Ponmala")).toBeInTheDocument();
   });
 
   it("shows the empty state when no communities fall in the agent's area", async () => {
