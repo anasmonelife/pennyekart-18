@@ -39,6 +39,7 @@ describe("commission allocation cards", () => {
       creator_name: "Creator", member_count: 4, order_count: 3, revenue: 1200, cost: 700, profit: 500,
     }], error: null });
     render(<CommissionAllocationTab roles={[]} rules={{}} fallbackRate={10} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Commission allocation/ }));
     fireEvent.click(await screen.findByRole("button", { name: /Coordinator/ }));
     expect(screen.queryByRole("button", { name: /Pro/ })).not.toBeInTheDocument();
     expect(screen.queryByText("Kodur")).not.toBeInTheDocument();
@@ -59,6 +60,7 @@ describe("commission allocation cards", () => {
       people: [{ ...person("1", "Anu", "coordinator", ["Kodur"]), rate: 10, communities: [], profit: 0, commission: 0 }],
     } : []));
     render(<CommissionAllocationTab roles={[]} rules={{}} fallbackRate={10} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Commission allocation/ }));
     expect(await screen.findByRole("button", { name: /Coordinator/ })).toBeInTheDocument();
     expect(mocks.invoke).not.toHaveBeenCalled();
   });

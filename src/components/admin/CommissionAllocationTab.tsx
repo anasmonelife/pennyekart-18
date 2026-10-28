@@ -168,140 +168,165 @@ export default function CommissionAllocationTab({ roles, rules, fallbackRate, re
 
   const busy = loading || refreshing;
 
+  const sections = [
+    { key: "table" as const, title: "Allocation table", description: "Profit and commission for each community", icon: Table2 },
+    { key: "report" as const, title: "Agent area report", description: "Sales and profit by agent area", icon: MapPinned },
+    { key: "allocation" as const, title: "Commission allocation", description: "e-Life allocations with commission by role", icon: IndianRupee },
+  ];
+
   return (
     <div className="space-y-4">
-      <CollapseSection title="Allocation table" open={openTable} onOpenChange={setOpenTable}>
-        <CommunityCommissionTable roles={roles} rules={rules} fallbackRate={fallbackRate} ready={ready} />
-      </CollapseSection>
-      <CollapseSection title="Agent area report" open={openReport} onOpenChange={setOpenReport}>
-        {openReport && <AgentAreaReport />}
-      </CollapseSection>
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 pb-3">
-          <div>
-            <CardTitle className="text-base">Commission allocation</CardTitle>
-            <p className="text-sm text-muted-foreground">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {sections.map((s) => (
+          <SectionCard key={s.key} title={s.title} description={s.description} icon={s.icon} onClick={() => setOpenSection(s.key)} />
+        ))}
+      </div>
+
+      <Dialog open={openSection === "table"} onOpenChange={(o) => { if (!o) setOpenSection(null); }}>
+        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Allocation table</DialogTitle>
+            <DialogDescription>Profit and creator commission for each community by period.</DialogDescription>
+          </DialogHeader>
+          <CommunityCommissionTable roles={roles} rules={rules} fallbackRate={fallbackRate} ready={ready} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={openSection === "report"} onOpenChange={(o) => { if (!o) setOpenSection(null); }}>
+        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Agent area report</DialogTitle>
+            <DialogDescription>Sales and profit across each agent's allocated area.</DialogDescription>
+          </DialogHeader>
+          {openSection === "report" && <AgentAreaReport />}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={openSection === "allocation"} onOpenChange={(o) => { if (!o) setOpenSection(null); }}>
+        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Commission allocation</DialogTitle>
+            <DialogDescription>
               Communities in each person's allocated area, their profit and the commission from the role commission rules.
-            </p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Select value={period} onValueChange={(v) => setPeriod(v as AllocationPeriod)}>
+                <SelectTrigger className="h-9 w-[140px]" aria-label="Period"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(PERIOD_LABELS) as AllocationPeriod[]).map((p) => (
+                    <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button size="sm" variant="outline" onClick={exportCsv} disabled={busy || !visible.length}>
+                <Download className="mr-1 h-4 w-4" /> Export
+              </Button>
+              <Button size="sm" onClick={() => void refresh()} disabled={busy || !ready}>
+                {refreshing ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1 h-4 w-4" />} Refresh
+              </Button>
+            </div>
             {savedAt && (
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Saved {new Date(savedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} · Refresh to fetch the latest
               </p>
             )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Select value={period} onValueChange={(v) => setPeriod(v as AllocationPeriod)}>
-              <SelectTrigger className="h-9 w-[140px]" aria-label="Period"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {(Object.keys(PERIOD_LABELS) as AllocationPeriod[]).map((p) => (
-                  <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button size="sm" variant="outline" onClick={exportCsv} disabled={busy || !visible.length}>
-              <Download className="mr-1 h-4 w-4" /> Export
-            </Button>
-            <Button size="sm" onClick={() => void refresh()} disabled={busy || !ready}>
-              {refreshing ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1 h-4 w-4" />} Refresh
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!busy && people.length > 0 && (
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-md bg-muted/50 p-2">
-                <p className="text-lg font-bold">{people.length}</p>
-                <p className="text-[11px] text-muted-foreground">People</p>
+            {!busy && people.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-md bg-muted/50 p-2">
+                  <p className="text-lg font-bold">{people.length}</p>
+                  <p className="text-[11px] text-muted-foreground">People</p>
+                </div>
+                <div className="rounded-md bg-muted/50 p-2">
+                  <p className="text-lg font-bold">{areaCommunities}</p>
+                  <p className="text-[11px] text-muted-foreground">Communities</p>
+                </div>
+                <div className="rounded-md bg-muted/50 p-2">
+                  <p className="text-lg font-bold">{money(totalCommission)}</p>
+                  <p className="text-[11px] text-muted-foreground">Total commission</p>
+                </div>
               </div>
-              <div className="rounded-md bg-muted/50 p-2">
-                <p className="text-lg font-bold">{areaCommunities}</p>
-                <p className="text-[11px] text-muted-foreground">Communities</p>
-              </div>
-              <div className="rounded-md bg-muted/50 p-2">
-                <p className="text-lg font-bold">{money(totalCommission)}</p>
-                <p className="text-[11px] text-muted-foreground">Total commission</p>
-              </div>
+            )}
+            <div className="grid gap-3 sm:grid-cols-[1fr_220px]">
+              <Input placeholder="Search name, mobile, panchayath or community" value={search} onChange={(e) => setSearch(e.target.value)} />
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger aria-label="Filter by role"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All roles</SelectItem>
+                  {allGroups.map((g) => <SelectItem key={g.role} value={g.role}>{roleLabel(g.role)}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-          )}
-          <div className="grid gap-3 sm:grid-cols-[1fr_220px]">
-            <Input placeholder="Search name, mobile, panchayath or community" value={search} onChange={(e) => setSearch(e.target.value)} />
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger aria-label="Filter by role"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All roles</SelectItem>
-                {allGroups.map((g) => <SelectItem key={g.role} value={g.role}>{roleLabel(g.role)}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            {blocked.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Some e-Life tables are not in the allowed list on the e-Life Bridge settings: {blocked.join(", ")}. Allow them to see full allocations.
+              </p>
+            )}
+            {error && people.length > 0 && <p className="text-xs text-destructive">{error}</p>}
+            {busy && people.length === 0 ? (
+              <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading commission allocation...
+              </div>
+            ) : error && people.length === 0 ? (
+              <div className="space-y-2 py-6 text-center">
+                <p className="text-sm text-destructive">{error}</p>
+                <Button size="sm" variant="outline" onClick={() => void refresh()}>Try again</Button>
+              </div>
+            ) : visible.length === 0 ? (
+              <p className="py-10 text-center text-sm text-muted-foreground">No e-Life people found for these filters.</p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {visible.map((g) => {
+                  const rate = g.people[0]?.rate ?? commissionRateForRole(pennyRoleId(g.role), rules, fallbackRate);
+                  const allocated = new Set(g.people.flatMap((p) => p.panchayaths.map((x) => x.id))).size;
+                  const comms = new Set(g.people.flatMap((p) => (p.communities ?? []).map((c) => c.community_id))).size;
+                  const commission = g.people.reduce((s, p) => s + (p.commission ?? 0), 0);
+                  return (
+                    <button
+                      key={g.role}
+                      type="button"
+                      onClick={() => setOpenRole(g.role)}
+                      className="group rounded-lg border bg-card p-4 text-left shadow-sm transition-colors hover:border-primary hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <ShieldCheck className="h-4 w-4" />
+                          </span>
+                          <div>
+                            <h3 className="font-semibold">{roleLabel(g.role)}</h3>
+                            <p className="text-xs text-muted-foreground">{rate}% of area profit</p>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-2 text-center">
+                        <div className="rounded-md bg-muted/50 p-2">
+                          <p className="text-lg font-bold">{g.people.length}</p>
+                          <p className="text-[11px] text-muted-foreground">People</p>
+                        </div>
+                        <div className="rounded-md bg-muted/50 p-2">
+                          <p className="text-lg font-bold">{allocated}</p>
+                          <p className="text-[11px] text-muted-foreground">Panchayaths</p>
+                        </div>
+                        <div className="rounded-md bg-muted/50 p-2">
+                          <p className="text-lg font-bold">{comms}</p>
+                          <p className="text-[11px] text-muted-foreground">Communities</p>
+                        </div>
+                        <div className="rounded-md bg-primary/10 p-2">
+                          <p className="text-lg font-bold text-primary">{money(commission)}</p>
+                          <p className="text-[11px] text-muted-foreground">Commission</p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          {blocked.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              Some e-Life tables are not in the allowed list on the e-Life Bridge settings: {blocked.join(", ")}. Allow them to see full allocations.
-            </p>
-          )}
-          {error && people.length > 0 && <p className="text-xs text-destructive">{error}</p>}
-        </CardContent>
-      </Card>
-
-      {busy && people.length === 0 ? (
-        <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading commission allocation...
-        </div>
-      ) : error && people.length === 0 ? (
-        <Card><CardContent className="space-y-2 p-6 text-center">
-          <p className="text-sm text-destructive">{error}</p>
-          <Button size="sm" variant="outline" onClick={() => void refresh()}>Try again</Button>
-        </CardContent></Card>
-      ) : visible.length === 0 ? (
-        <p className="py-10 text-center text-sm text-muted-foreground">No e-Life people found for these filters.</p>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.map((g) => {
-            const rate = g.people[0]?.rate ?? commissionRateForRole(pennyRoleId(g.role), rules, fallbackRate);
-            const allocated = new Set(g.people.flatMap((p) => p.panchayaths.map((x) => x.id))).size;
-            const comms = new Set(g.people.flatMap((p) => (p.communities ?? []).map((c) => c.community_id))).size;
-            const commission = g.people.reduce((s, p) => s + (p.commission ?? 0), 0);
-            return (
-              <button
-                key={g.role}
-                type="button"
-                onClick={() => setOpenRole(g.role)}
-                className="group rounded-lg border bg-card p-4 text-left shadow-sm transition-colors hover:border-primary hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <ShieldCheck className="h-4 w-4" />
-                    </span>
-                    <div>
-                      <h3 className="font-semibold">{roleLabel(g.role)}</h3>
-                      <p className="text-xs text-muted-foreground">{rate}% of area profit</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-2 text-center">
-                  <div className="rounded-md bg-muted/50 p-2">
-                    <p className="text-lg font-bold">{g.people.length}</p>
-                    <p className="text-[11px] text-muted-foreground">People</p>
-                  </div>
-                  <div className="rounded-md bg-muted/50 p-2">
-                    <p className="text-lg font-bold">{allocated}</p>
-                    <p className="text-[11px] text-muted-foreground">Panchayaths</p>
-                  </div>
-                  <div className="rounded-md bg-muted/50 p-2">
-                    <p className="text-lg font-bold">{comms}</p>
-                    <p className="text-[11px] text-muted-foreground">Communities</p>
-                  </div>
-                  <div className="rounded-md bg-primary/10 p-2">
-                    <p className="text-lg font-bold text-primary">{money(commission)}</p>
-                    <p className="text-[11px] text-muted-foreground">Commission</p>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!openGroup} onOpenChange={(o) => !o && setOpenRole(null)}>
         <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
