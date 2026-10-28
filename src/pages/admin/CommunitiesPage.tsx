@@ -568,7 +568,7 @@ const CommunitiesPage = () => {
                       </TableRow>
                       {expanded && (
                         <TableRow>
-                          <TableCell colSpan={9} className="bg-muted/30 p-0">
+                          <TableCell colSpan={10} className="bg-muted/30 p-0">
                             <div className="space-y-3 p-3">
                               <div className="flex flex-wrap items-center justify-between gap-2">
                                 <p className="text-sm">Creator commission ({communityRate(r)}%): <strong>{money(communityCommission(r))}</strong></p>
