@@ -627,6 +627,58 @@ const CommunitiesPage = () => {
         </Card>
           </TabsContent>
         </Tabs>
+
+        <Dialog open={renameTarget !== null} onOpenChange={(open) => { if (!open) setRenameTarget(null); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Rename community</DialogTitle>
+              <DialogDescription>
+                The new name is visible to all members of {renameTarget?.community_name}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-1.5">
+              <Label htmlFor="community-new-name">Community name</Label>
+              <Input
+                id="community-new-name"
+                value={renameValue}
+                maxLength={100}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void submitRename(); }}
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setRenameTarget(null)} disabled={renaming}>Cancel</Button>
+              <Button onClick={submitRename} disabled={renaming || !renameValue.trim()}>
+                {renaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Save name
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete “{deleteTarget?.community_name}”?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently removes the community, removes all its members, and cancels pending invites and access
+                requests. Saved commission payout records are kept. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleting}
+                onClick={(e) => { e.preventDefault(); void confirmDelete(); }}
+              >
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                Delete community
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
     </AdminLayout>
