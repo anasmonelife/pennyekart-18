@@ -187,7 +187,12 @@ export default function CommissionAllocationTab({ roles, rules, fallbackRate, re
 
   return (
     <div className="space-y-4">
-      <CommunityCommissionTable roles={roles} rules={rules} fallbackRate={fallbackRate} ready={ready} />
+      <CollapseSection title="Allocation table" open={openTable} onOpenChange={setOpenTable}>
+        <CommunityCommissionTable roles={roles} rules={rules} fallbackRate={fallbackRate} ready={ready} />
+      </CollapseSection>
+      <CollapseSection title="Agent area report" open={openReport} onOpenChange={setOpenReport}>
+        {openReport && <AgentAreaReport />}
+      </CollapseSection>
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 pb-3">
           <div>
