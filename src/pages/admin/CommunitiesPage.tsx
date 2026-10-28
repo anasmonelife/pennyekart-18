@@ -502,6 +502,7 @@ const CommunitiesPage = () => {
                       <TableHead className="text-right">Cost</TableHead>
                       <TableHead className="text-right">Profit</TableHead>
                       <TableHead className="text-right">Commission</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
