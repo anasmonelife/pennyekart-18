@@ -82,3 +82,4 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/c
 27/10-26 agent
 27-10-26 prime peny
 27-10-26  anasmon elife
+28/10-26 handrest
