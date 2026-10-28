@@ -477,7 +477,7 @@ export type Database = {
           amount: number
           calculated_commission: number
           commission_rate: number
-          community_id: string
+          community_id: string | null
           community_name: string
           created_at: string
           customer_user_id: string | null
@@ -501,7 +501,7 @@ export type Database = {
           amount: number
           calculated_commission: number
           commission_rate: number
-          community_id: string
+          community_id?: string | null
           community_name: string
           created_at?: string
           customer_user_id?: string | null
@@ -525,7 +525,7 @@ export type Database = {
           amount?: number
           calculated_commission?: number
           commission_rate?: number
-          community_id?: string
+          community_id?: string | null
           community_name?: string
           created_at?: string
           customer_user_id?: string | null
@@ -3018,6 +3018,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_community: {
+        Args: { _community_id: string }
+        Returns: boolean
+      }
+      admin_rename_community: {
+        Args: { _community_id: string; _new_name: string }
+        Returns: boolean
+      }
       allocate_commission_row: { Args: { _id: string }; Returns: string }
       am_i_verified: { Args: never; Returns: boolean }
       anonymize_user_data: { Args: { _uid: string }; Returns: undefined }

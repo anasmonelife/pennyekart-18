@@ -10,6 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -105,6 +110,11 @@ const CommunitiesPage = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [memberLoading, setMemberLoading] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<SummaryRow | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<SummaryRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const range = useMemo(() => resolveRange(period, customFrom, customTo), [period, customFrom, customTo]);
   const pct = Number(commission) || 0;
@@ -252,6 +262,35 @@ const CommunitiesPage = () => {
     if (expandedId === row.community_id) { setExpandedId(null); return; }
     setExpandedId(row.community_id);
     void loadMembers(row);
+  };
+
+  const openRename = (row: SummaryRow) => {
+    setRenameTarget(row);
+    setRenameValue(row.community_name);
+  };
+
+  const submitRename = async () => {
+    const name = renameValue.trim();
+    if (!renameTarget || !name) { toast.error("Enter a community name"); return; }
+    setRenaming(true);
+    const { error } = await rpc("admin_rename_community", { _community_id: renameTarget.community_id, _new_name: name });
+    setRenaming(false);
+    if (error) { toast.error(error.message.replace(/^.*?:\s*/, "")); return; }
+    setRenameTarget(null);
+    toast.success("Community renamed");
+    void load();
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { error } = await rpc("admin_delete_community", { _community_id: deleteTarget.community_id });
+    setDeleting(false);
+    if (error) { toast.error(error.message.replace(/^.*?:\s*/, "")); return; }
+    setDeleteTarget(null);
+    if (expandedId === deleteTarget.community_id) setExpandedId(null);
+    toast.success("Community deleted");
+    void load();
   };
 
   const totals = useMemo(() => {
@@ -463,6 +502,7 @@ const CommunitiesPage = () => {
                       <TableHead className="text-right">Cost</TableHead>
                       <TableHead className="text-right">Profit</TableHead>
                       <TableHead className="text-right">Commission</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -492,6 +532,29 @@ const CommunitiesPage = () => {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              aria-label={`Rename ${r.community_name}`}
+                              title="Rename community"
+                              onClick={() => openRename(r)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              aria-label={`Delete ${r.community_name}`}
+                              title="Delete community"
+                              onClick={() => setDeleteTarget(r)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
                           <Button
                             size="icon"
                             variant="ghost"
@@ -505,7 +568,7 @@ const CommunitiesPage = () => {
                       </TableRow>
                       {expanded && (
                         <TableRow>
-                          <TableCell colSpan={9} className="bg-muted/30 p-0">
+                          <TableCell colSpan={10} className="bg-muted/30 p-0">
                             <div className="space-y-3 p-3">
                               <div className="flex flex-wrap items-center justify-between gap-2">
                                 <p className="text-sm">Creator commission ({communityRate(r)}%): <strong>{money(communityCommission(r))}</strong></p>
@@ -564,6 +627,58 @@ const CommunitiesPage = () => {
         </Card>
           </TabsContent>
         </Tabs>
+
+        <Dialog open={renameTarget !== null} onOpenChange={(open) => { if (!open) setRenameTarget(null); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Rename community</DialogTitle>
+              <DialogDescription>
+                The new name is visible to all members of {renameTarget?.community_name}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-1.5">
+              <Label htmlFor="community-new-name">Community name</Label>
+              <Input
+                id="community-new-name"
+                value={renameValue}
+                maxLength={100}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void submitRename(); }}
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setRenameTarget(null)} disabled={renaming}>Cancel</Button>
+              <Button onClick={submitRename} disabled={renaming || !renameValue.trim()}>
+                {renaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Save name
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete “{deleteTarget?.community_name}”?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently removes the community, removes all its members, and cancels pending invites and access
+                requests. Saved commission payout records are kept. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleting}
+                onClick={(e) => { e.preventDefault(); void confirmDelete(); }}
+              >
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                Delete community
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
     </AdminLayout>
