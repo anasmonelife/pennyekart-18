@@ -157,8 +157,6 @@ const CommunityCard = ({ userId }: Props) => {
     setNewName("");
     setNewDescription("");
     toast.success("Community created!");
-    setNewName("");
-    toast.success("Community created!");
     load();
   };
 
