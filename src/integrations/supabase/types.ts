@@ -411,6 +411,7 @@ export type Database = {
         Row: {
           created_at: string
           creator_user_id: string
+          description: string | null
           id: string
           name: string
           updated_at: string
@@ -418,6 +419,7 @@ export type Database = {
         Insert: {
           created_at?: string
           creator_user_id: string
+          description?: string | null
           id?: string
           name: string
           updated_at?: string
@@ -425,6 +427,7 @@ export type Database = {
         Update: {
           created_at?: string
           creator_user_id?: string
+          description?: string | null
           id?: string
           name?: string
           updated_at?: string
@@ -3043,7 +3046,9 @@ export type Database = {
         Args: { _code: string }
         Returns: boolean
       }
-      create_community: { Args: { _name: string }; Returns: string }
+      create_community:
+        | { Args: { _name: string }; Returns: string }
+        | { Args: { _description?: string; _name: string }; Returns: string }
       delete_account_data: { Args: { _uid: string }; Returns: Json }
       delete_my_community: { Args: never; Returns: boolean }
       get_community_member_revenue: {

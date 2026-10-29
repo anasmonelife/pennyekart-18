@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SITE_URL, communityInviteLink, communityInviteWhatsAppMessage, whatsappShareUrl } from "@/lib/appLinks";
+import { defaultCommunityName } from "@/lib/communityForm";
 
 interface Props {
   userId: string;
@@ -17,6 +18,7 @@ interface Props {
 interface CommunitySummary {
   community_id: string;
   name: string;
+  description?: string | null;
   creator_name: string;
   member_count: number;
   is_creator: boolean;
@@ -60,6 +62,7 @@ const CommunityCard = ({ userId }: Props) => {
   const [pending, setPending] = useState<InviteRow[]>([]);
   const [incoming, setIncoming] = useState<IncomingInvite[]>([]);
   const [newName, setNewName] = useState("");
+  const [newDescription, setNewDescription] = useState("");
   const [inviteMobile, setInviteMobile] = useState("");
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
@@ -69,10 +72,17 @@ const CommunityCard = ({ userId }: Props) => {
     await rpc("prune_inactive_community_members");
     const { data: prof } = await supabase
       .from("profiles")
-      .select("is_verified")
+      .select("is_verified, full_name, mobile_number, ward_number, local_body_id")
       .eq("user_id", userId)
       .maybeSingle();
-    const verified = Boolean((prof as { is_verified?: boolean } | null)?.is_verified);
+    const profile = (prof as {
+      is_verified?: boolean;
+      full_name?: string | null;
+      mobile_number?: string | null;
+      ward_number?: number | null;
+      local_body_id?: string | null;
+    } | null) ?? {};
+    const verified = Boolean(profile.is_verified);
     setIsVerified(verified);
 
     const { data: summary } = await rpc("get_my_community");
@@ -98,6 +108,20 @@ const CommunityCard = ({ userId }: Props) => {
       setIncoming([]);
     }
 
+    // Prefill the create form: name = "{name}-w{ward}-{last 4 of mobile}", description = panchayath name.
+    if (!row && verified) {
+      setNewName((cur) => cur || defaultCommunityName(profile.full_name ?? null, profile.ward_number ?? null, profile.mobile_number ?? null));
+      if (profile.local_body_id) {
+        const { data: lb } = await supabase
+          .from("locations_local_bodies")
+          .select("name")
+          .eq("id", profile.local_body_id)
+          .maybeSingle();
+        const lbName = ((lb as { name?: string | null } | null) ?? {}).name ?? "";
+        setNewDescription((cur) => cur || lbName);
+      }
+    }
+
     setLoading(false);
   }, [userId]);
 
@@ -111,13 +135,14 @@ const CommunityCard = ({ userId }: Props) => {
       return;
     }
     setBusy(true);
-    const { error } = await rpc("create_community", { _name: newName.trim() });
+    const { error } = await rpc("create_community", { _name: newName.trim(), _description: newDescription.trim() });
     setBusy(false);
     if (error) {
       toast.error(error.message.replace(/^.*?:\s*/, ""));
       return;
     }
     setNewName("");
+    setNewDescription("");
     toast.success("Community created!");
     load();
   };
@@ -283,6 +308,13 @@ const CommunityCard = ({ userId }: Props) => {
                   />
                   <Button onClick={handleCreate} disabled={busy}>Create</Button>
                 </div>
+                <Input
+                  id="community-description"
+                  placeholder="Description (panchayath)"
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  maxLength={120}
+                />
                 <p className="text-xs text-muted-foreground">You can belong to only one community.</p>
               </div>
 
@@ -315,6 +347,9 @@ const CommunityCard = ({ userId }: Props) => {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold truncate">{community.name}</p>
+                    {community.description && (
+                      <p className="text-xs text-muted-foreground truncate">{community.description}</p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       Created by {community.is_creator ? "you" : community.creator_name}
                     </p>
