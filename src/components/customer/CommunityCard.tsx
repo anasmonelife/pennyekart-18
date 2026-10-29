@@ -17,6 +17,7 @@ interface Props {
 interface CommunitySummary {
   community_id: string;
   name: string;
+  description?: string | null;
   creator_name: string;
   member_count: number;
   is_creator: boolean;
@@ -74,6 +75,7 @@ const CommunityCard = ({ userId }: Props) => {
   const [pending, setPending] = useState<InviteRow[]>([]);
   const [incoming, setIncoming] = useState<IncomingInvite[]>([]);
   const [newName, setNewName] = useState("");
+  const [newDescription, setNewDescription] = useState("");
   const [inviteMobile, setInviteMobile] = useState("");
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
