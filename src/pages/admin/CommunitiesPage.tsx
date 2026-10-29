@@ -336,10 +336,14 @@ const CommunitiesPage = () => {
         <Tabs defaultValue="communities" className="space-y-6">
           <TabsList>
             <TabsTrigger value="communities">Communities</TabsTrigger>
+            <TabsTrigger value="access-requests">Access requests</TabsTrigger>
             <TabsTrigger value="allocation">Commission allocation</TabsTrigger>
             <TabsTrigger value="reporting">Reporting</TabsTrigger>
             <TabsTrigger value="payouts">Payout requests</TabsTrigger>
           </TabsList>
+          <TabsContent value="access-requests">
+            <CommunityAccessRequests />
+          </TabsContent>
           <TabsContent value="allocation">
             <CommissionAllocationTab roles={roles} rules={rules} fallbackRate={pct} ready={settingsLoaded && rolesLoaded} />
           </TabsContent>
@@ -350,9 +354,6 @@ const CommunitiesPage = () => {
             <CommunityPayoutRequests ready={settingsLoaded && rolesLoaded} />
           </TabsContent>
           <TabsContent value="communities" className="space-y-6">
-
-        <CommunityAccessRequests />
-
         {/* Filters */}
         <Card>
           <CardContent className="p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
