@@ -321,6 +321,13 @@ const CommunityCard = ({ userId }: Props) => {
                   />
                   <Button onClick={handleCreate} disabled={busy}>Create</Button>
                 </div>
+                <Input
+                  id="community-description"
+                  placeholder="Description (panchayath)"
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  maxLength={120}
+                />
                 <p className="text-xs text-muted-foreground">You can belong to only one community.</p>
               </div>
 
@@ -353,6 +360,9 @@ const CommunityCard = ({ userId }: Props) => {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold truncate">{community.name}</p>
+                    {community.description && (
+                      <p className="text-xs text-muted-foreground truncate">{community.description}</p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       Created by {community.is_creator ? "you" : community.creator_name}
                     </p>
