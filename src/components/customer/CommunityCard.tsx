@@ -148,12 +148,15 @@ const CommunityCard = ({ userId }: Props) => {
       return;
     }
     setBusy(true);
-    const { error } = await rpc("create_community", { _name: newName.trim() });
+    const { error } = await rpc("create_community", { _name: newName.trim(), _description: newDescription.trim() });
     setBusy(false);
     if (error) {
       toast.error(error.message.replace(/^.*?:\s*/, ""));
       return;
     }
+    setNewName("");
+    setNewDescription("");
+    toast.success("Community created!");
     setNewName("");
     toast.success("Community created!");
     load();
