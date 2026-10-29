@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SITE_URL, communityInviteLink, communityInviteWhatsAppMessage, whatsappShareUrl } from "@/lib/appLinks";
+import { defaultCommunityName } from "@/lib/communityForm";
 
 interface Props {
   userId: string;
@@ -52,20 +53,6 @@ const rpc = (fn: string, args?: Record<string, unknown>) =>
   (supabase.rpc as unknown as (n: string, a?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)(fn, args);
 
 const digitsOnly = (v: string) => v.replace(/\D/g, "");
-
-export const defaultCommunityName = (
-  fullName: string | null,
-  wardNumber: number | null,
-  mobileNumber: string | null,
-) => {
-  const name = (fullName ?? "").trim();
-  if (!name) return "";
-  const digits = (mobileNumber ?? "").replace(/\D/g, "");
-  const parts = [name];
-  if (wardNumber != null && wardNumber > 0) parts.push(`w${wardNumber}`);
-  if (digits.length >= 4) parts.push(digits.slice(-4));
-  return parts.join("-");
-};
 
 const CommunityCard = ({ userId }: Props) => {
   const [loading, setLoading] = useState(true);
