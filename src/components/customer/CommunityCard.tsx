@@ -85,10 +85,17 @@ const CommunityCard = ({ userId }: Props) => {
     await rpc("prune_inactive_community_members");
     const { data: prof } = await supabase
       .from("profiles")
-      .select("is_verified")
+      .select("is_verified, full_name, mobile_number, ward_number, local_body_id")
       .eq("user_id", userId)
       .maybeSingle();
-    const verified = Boolean((prof as { is_verified?: boolean } | null)?.is_verified);
+    const profile = (prof as {
+      is_verified?: boolean;
+      full_name?: string | null;
+      mobile_number?: string | null;
+      ward_number?: number | null;
+      local_body_id?: string | null;
+    } | null) ?? {};
+    const verified = Boolean(profile.is_verified);
     setIsVerified(verified);
 
     const { data: summary } = await rpc("get_my_community");
@@ -112,6 +119,20 @@ const CommunityCard = ({ userId }: Props) => {
       setIncoming((inc as IncomingInvite[] | null) ?? []);
     } else {
       setIncoming([]);
+    }
+
+    // Prefill the create form: name = "{name}-w{ward}-{last 4 of mobile}", description = panchayath name.
+    if (!row && verified) {
+      setNewName((cur) => cur || defaultCommunityName(profile.full_name ?? null, profile.ward_number ?? null, profile.mobile_number ?? null));
+      if (profile.local_body_id) {
+        const { data: lb } = await supabase
+          .from("locations_local_bodies")
+          .select("name")
+          .eq("id", profile.local_body_id)
+          .maybeSingle();
+        const lbName = ((lb as { name?: string | null } | null) ?? {}).name ?? "";
+        setNewDescription((cur) => cur || lbName);
+      }
     }
 
     setLoading(false);
