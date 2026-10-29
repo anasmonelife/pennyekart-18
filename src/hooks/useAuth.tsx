@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
+import { maybeAskForNotifications } from "@/lib/notificationReminder";
 
 interface Profile {
   id: string;
@@ -96,6 +97,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Update last_login_at on sign in
           if (_event === 'SIGNED_IN') {
             supabase.from("profiles").update({ last_login_at: new Date().toISOString() }).eq("user_id", newSession.user.id).then();
+            // Ask the customer to turn on notifications (at most once a week).
+            void maybeAskForNotifications();
           }
           fetchProfile(newSession.user.id).finally(() => {
             if (mountedRef.current) setLoading(false);
@@ -116,6 +119,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setSession(initialSession);
       setUser(initialSession.user);
+      // Returning signed-in customer: still offer notifications once a week.
+      void maybeAskForNotifications();
       fetchProfile(initialSession.user.id).finally(() => {
         if (mountedRef.current) setLoading(false);
       });
