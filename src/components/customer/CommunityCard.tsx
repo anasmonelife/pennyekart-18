@@ -52,6 +52,20 @@ const rpc = (fn: string, args?: Record<string, unknown>) =>
 
 const digitsOnly = (v: string) => v.replace(/\D/g, "");
 
+export const defaultCommunityName = (
+  fullName: string | null,
+  wardNumber: number | null,
+  mobileNumber: string | null,
+) => {
+  const name = (fullName ?? "").trim();
+  if (!name) return "";
+  const digits = (mobileNumber ?? "").replace(/\D/g, "");
+  const parts = [name];
+  if (wardNumber != null && wardNumber > 0) parts.push(`w${wardNumber}`);
+  if (digits.length >= 4) parts.push(digits.slice(-4));
+  return parts.join("-");
+};
+
 const CommunityCard = ({ userId }: Props) => {
   const [loading, setLoading] = useState(true);
   const [isVerified, setIsVerified] = useState(false);
