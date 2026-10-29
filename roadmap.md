@@ -51,7 +51,9 @@
 
 ## Community role access and requests
 - [ ] Restrict My Community to Coordinator, Group Leader, and Pro; let other users request access.
-- [ ] Add admin review with eligible-role assignment and activation enforced on the server.
+- [x] Add admin review with eligible-role assignment and activation enforced on the server.
+- [x] Give Community access requests their own admin tab with Pending/Approved/Declined/All filters and Accept/Reject actions (server-enforced review unchanged).
+- [x] Ask signed-in customers to turn on notifications at most once a week (notificationReminder + useAuth hook), with tests.
 - [ ] Run focused tests and verify available preview checks (authenticated checks blocked by external Supabase).
 
 ## Delivery staff customer contact alert
