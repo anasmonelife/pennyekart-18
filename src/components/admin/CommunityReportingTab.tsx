@@ -24,6 +24,7 @@ interface ReportRow {
 const TYPE_LABEL: Record<string, string> = { creator: "Creator", coordinator: "Coordinator", team_leader: "Team leader", super_admin: "Super admin partner" };
 const STATUS_LABEL: Record<string, string> = { pending: "Pending", verified: "Verified", allocated: "Allocated" };
 const isRevised = (r: ReportRow) => (r.revision_count ?? 0) > 0;
+const rowStatusLabel = (r: ReportRow) => (isRevised(r) ? "Revised" : STATUS_LABEL[r.status]);
 const money = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function CommunityReportingTab() {
@@ -101,7 +102,7 @@ export default function CommunityReportingTab() {
       const lines = filtered.map(r => [
         r.community_name, r.period_from, r.period_to,
         TYPE_LABEL[r.recipient_type] ?? r.recipient_type, r.recipient_name ?? "", r.recipient_mobile ?? "",
-        String(r.commission_rate), Number(r.calculated_commission).toFixed(2), Number(r.amount).toFixed(2), STATUS_LABEL[r.status],
+        String(r.commission_rate), Number(r.calculated_commission).toFixed(2), Number(r.amount).toFixed(2), rowStatusLabel(r),
       ].map(esc).join(","));
       const blob = new Blob([[header.join(","), ...lines].join("\n")], { type: "text/csv" });
       const result = await shareOrDownload(blob, `community-commission-report-${from}-to-${to}.csv`, { title: "Community commission report" });
