@@ -19,6 +19,7 @@ interface SavedRow {
   id: string; community_id: string; community_name: string; customer_user_id: string | null;
   recipient_type: string; recipient_name: string | null; recipient_mobile: string | null;
   total_profit: number; commission_rate: number; calculated_commission: number; amount: number;
+  original_amount: number | null; revised_amount: number | null; revision_count: number; revised_at: string | null;
   share_count: number; period_from: string; period_to: string; status: "pending" | "verified" | "allocated"; allocated_at: string | null; created_at: string;
 }
 interface Props { roles?: { id: string; name: string }[]; rules: Record<string, CommissionRule>; fallbackRate: number; ready: boolean }
