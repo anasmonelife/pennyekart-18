@@ -66,19 +66,23 @@ export default function CommunityReportingTab() {
   const kpi = useMemo(() => {
     const profit = new Map<string, number>();
     const communities = new Set<string>();
-    let total = 0, pending = 0, allocated = 0, revised = 0, revisedCount = 0;
+    let total = 0, pending = 0, pendingCount = 0, allocated = 0, allocatedCount = 0;
+    let revised = 0, revisedCount = 0, revisedOriginal = 0;
     for (const r of filtered) {
       const key = `${r.community_id}|${r.period_from}|${r.period_to}`;
       communities.add(key);
       if (!profit.has(key)) profit.set(key, Number(r.total_profit) || 0);
       const amt = Number(r.amount) || 0;
       total += amt;
-      if (isRevised(r)) { revised += amt; revisedCount += 1; }
-      else if (r.status === "allocated") allocated += amt;
-      else pending += amt; // pending + verified rows await allocation
+      const category = rowCategory(r);
+      if (category === "revised") {
+        revised += amt; revisedCount += 1;
+        revisedOriginal += Number(r.original_amount) || 0;
+      } else if (category === "allocated") { allocated += amt; allocatedCount += 1; }
+      else { pending += amt; pendingCount += 1; }
     }
     const totalProfit = [...profit.values()].reduce((s, v) => s + v, 0);
-    return { rows: filtered.length, communities: communities.size, totalProfit, total, pending, allocated, revised, revisedCount };
+    return { rows: filtered.length, communities: communities.size, totalProfit, total, pending, pendingCount, allocated, allocatedCount, revised, revisedCount, revisedOriginal };
   }, [filtered]);
 
   /** Commission total per role for the filtered rows. */
@@ -124,6 +128,7 @@ export default function CommunityReportingTab() {
           <select id="report-role" className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={role} onChange={e => setRole(e.target.value)}>
             <option value="all">All roles</option>
             <option value="creator">Creator</option>
+            <option value="group_leader">Group leader</option>
             <option value="coordinator">Coordinator</option>
             <option value="team_leader">Team leader</option>
             <option value="super_admin">Super admin partner</option>
