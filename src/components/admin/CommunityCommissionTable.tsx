@@ -143,10 +143,20 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
   );
   const statusLine = (r: SavedRow) => (
     <div key={`status-${r.id}`}>
-      <Badge variant="outline">{r.status === "verified" ? "Verified" : "Pending verification"}</Badge>
+      {isRevised(r) ? (
+        <>
+          <Badge variant="secondary">Revised</Badge>
+          <p className="text-xs text-muted-foreground mt-1">{money(Number(r.original_amount) || 0)} → {money(r.amount)}</p>
+        </>
+      ) : (
+        <Badge variant="outline">{r.status === "verified" ? "Verified" : "Pending verification"}</Badge>
+      )}
     </div>
   );
   const actionLine = (r: SavedRow) => {
+    if (isRevised(r)) {
+      return <div key={`action-${r.id}`} className="text-xs text-muted-foreground">Adjusted after allocation · history in Commission reporting</div>;
+    }
     const amount = amountOf(r);
     return (
       <div key={`action-${r.id}`} className="space-x-1 whitespace-nowrap">
