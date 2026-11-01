@@ -24,6 +24,7 @@ interface SavedRow {
 }
 interface Props { roles?: { id: string; name: string }[]; rules: Record<string, CommissionRule>; fallbackRate: number; ready: boolean }
 const money = (n: number) => `₹${Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const isRevised = (r: SavedRow) => (r.revision_count ?? 0) > 0;
 const TYPE_LABEL: Record<string, string> = { creator: "Creator", group_leader: "Group leader", coordinator: "Coordinator", team_leader: "Team leader", super_admin: "Super admin partner" };
 
 export default function CommunityCommissionTable({ roles = [], rules, fallbackRate, ready }: Props) {
@@ -47,7 +48,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
     const { data, error } = await db.from("community_commission_allocations").select("*")
       .lte("period_from", to).gte("period_to", from).order("created_at", { ascending: false });
     if (error) setError(error.message);
-    else setRows(((data ?? []) as SavedRow[]).filter(r => r.period_from === from && r.period_to === to && r.status !== "allocated"));
+    else setRows(((data ?? []) as SavedRow[]).filter(r => r.period_from === from && r.period_to === to && (r.status !== "allocated" || isRevised(r))));
     setLoading(false);
   }, [from, to, ready, validPeriod]);
   useEffect(() => { void load(); }, [load]);
@@ -142,10 +143,20 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
   );
   const statusLine = (r: SavedRow) => (
     <div key={`status-${r.id}`}>
-      <Badge variant="outline">{r.status === "verified" ? "Verified" : "Pending verification"}</Badge>
+      {isRevised(r) ? (
+        <>
+          <Badge variant="secondary">Revised</Badge>
+          <p className="text-xs text-muted-foreground mt-1">{money(Number(r.original_amount) || 0)} → {money(r.amount)}</p>
+        </>
+      ) : (
+        <Badge variant="outline">{r.status === "verified" ? "Verified" : "Pending verification"}</Badge>
+      )}
     </div>
   );
   const actionLine = (r: SavedRow) => {
+    if (isRevised(r)) {
+      return <div key={`action-${r.id}`} className="text-xs text-muted-foreground">Adjusted after allocation · history in Commission reporting</div>;
+    }
     const amount = amountOf(r);
     return (
       <div key={`action-${r.id}`} className="space-x-1 whitespace-nowrap">
@@ -159,7 +170,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
     <section className="space-y-4 border-b pb-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><h2 className="text-lg font-semibold">Allocation table</h2>
-          <p className="text-xs text-muted-foreground">Community profit shared to creator, group leader (a same-ward Pro's community), coordinator (wards), team leader and super admin partner (panchayaths). Only pending calculations are shown here — allocated commission details and revisions are in the Commission reporting tab.</p></div>
+          <p className="text-xs text-muted-foreground">Community profit shared to creator, group leader (a same-ward Pro's community), coordinator (wards), team leader and super admin partner (panchayaths). Pending calculations and revised allocations (badged Revised) are shown here — full revision history is in the Commission reporting tab.</p></div>
         <Button size="sm" onClick={() => void calculate()} disabled={busy || !ready || !validPeriod}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Calculate &amp; save</Button>
       </div>
       <div className="flex flex-wrap gap-3">
@@ -188,8 +199,8 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
               const key = `${g.community_id}|${g.period_from}|${g.period_to}`;
               const open = !!expanded[key];
               const total = g.rows.reduce((s, r) => s + Number(r.amount), 0);
-              const counts = g.rows.reduce<Record<string, number>>((acc, r) => { acc[r.status] = (acc[r.status] ?? 0) + 1; return acc; }, {});
-              const statusText = (["allocated", "verified", "pending"] as const)
+              const counts = g.rows.reduce<Record<string, number>>((acc, r) => { const k = isRevised(r) ? "revised" : r.status; acc[k] = (acc[k] ?? 0) + 1; return acc; }, {});
+              const statusText = (["revised", "allocated", "verified", "pending"] as const)
                 .filter(s => counts[s]).map(s => `${counts[s]} ${s === "pending" ? "pending" : s}`).join(" · ");
               return (
                 <Fragment key={key}>
@@ -220,7 +231,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
                       <TableCell className="align-top">{recipientLine(r)}</TableCell>
                       <TableCell className="text-right align-top text-xs">{r.commission_rate}% · {money(r.calculated_commission)}</TableCell>
                       <TableCell className="align-top">
-                        <Input type="number" min="0.01" step="0.01" aria-label={`Commission for ${r.recipient_name ?? r.community_name}`} className="w-28" value={edits[r.id] ?? Number(r.amount).toFixed(2)} onChange={e => setEdits(p => ({ ...p, [r.id]: e.target.value }))} disabled={busy} />
+                        <Input type="number" min="0.01" step="0.01" aria-label={`Commission for ${r.recipient_name ?? r.community_name}`} className="w-28" value={edits[r.id] ?? Number(r.amount).toFixed(2)} onChange={e => setEdits(p => ({ ...p, [r.id]: e.target.value }))} disabled={busy || isRevised(r)} />
                       </TableCell>
                       <TableCell className="align-top">{statusLine(r)}</TableCell>
                       <TableCell className="align-top">{actionLine(r)}</TableCell>

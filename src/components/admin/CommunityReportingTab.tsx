@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { commissionDate } from "@/lib/commissionPayout";
+import { commissionDate, reviseCommissionChange } from "@/lib/commissionPayout";
 import { shareOrDownload } from "@/lib/exportFile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, PencilLine } from "lucide-react";
 import { toast } from "sonner";
 
 const db = supabase as unknown as { from: (t: string) => any };
@@ -39,6 +40,10 @@ export default function CommunityReportingTab() {
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [reviseOpen, setReviseOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [newAmount, setNewAmount] = useState("");
+  const [busy, setBusy] = useState(false);
   const validPeriod = !!from && !!to && from <= to && to <= today;
 
   /** Same period rules as the allocation table: saved rows for this period, plus allocated history that overlaps it. */
@@ -96,6 +101,25 @@ export default function CommunityReportingTab() {
     return [...map.entries()].sort((a, b) => b[1].amount - a[1].amount);
   }, [filtered]);
 
+  /** Allocated history for the period: the transactions that can be revised. */
+  const allocatedRows = useMemo(() => rows.filter(r => r.status === "allocated"), [rows]);
+  const selected = allocatedRows.find(r => r.id === selectedId) ?? null;
+  const change = selected && newAmount.trim() !== "" ? reviseCommissionChange(Number(selected.amount), Number(newAmount)) : null;
+
+  const openRevise = (id?: string) => { setSelectedId(id ?? null); setNewAmount(""); setReviseOpen(true); };
+
+  const submitRevise = async () => {
+    if (!selected || !change) return;
+    setBusy(true);
+    const { error } = await db.rpc("revise_commission_allocation", { _id: selected.id, _new_amount: change.amount });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success(`Commission revised to ${money(change.amount)} — listed under Revised`);
+    setReviseOpen(false); setSelectedId(null); setNewAmount("");
+    await load();
+  };
+
+
   const exportCsv = async () => {
     setExporting(true);
     try {
@@ -143,6 +167,11 @@ export default function CommunityReportingTab() {
           </select>
         </div>
         <div className="space-y-1 min-w-[200px] flex-1 max-w-xs"><Label htmlFor="report-search">Search</Label><Input id="report-search" placeholder="Community or recipient" value={search} onChange={e => setSearch(e.target.value)} /></div>
+        <div className="space-y-1"><Label htmlFor="report-revise" className="opacity-0">Revise</Label>
+          <Button id="report-revise" size="sm" variant="outline" onClick={() => openRevise()} disabled={!validPeriod || allocatedRows.length === 0}>
+            <PencilLine className="mr-2 h-4 w-4" />Revise transaction
+          </Button>
+        </div>
         <div className="space-y-1"><Label htmlFor="report-export" className="opacity-0">Export</Label>
           <Button id="report-export" size="sm" variant="outline" onClick={() => void exportCsv()} disabled={exporting || !validPeriod || filtered.length === 0}>
             {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}Export CSV
@@ -229,6 +258,11 @@ export default function CommunityReportingTab() {
                     {!isRevised(r) && r.status === "allocated" && r.allocated_at && (
                       <p className="text-xs text-muted-foreground mt-1">{new Date(r.allocated_at).toLocaleString("en-IN")}</p>
                     )}
+                    {r.status === "allocated" && (
+                      <Button size="sm" variant="ghost" className="mt-1 h-6 px-2 text-xs" onClick={() => openRevise(r.id)}>
+                        <PencilLine className="mr-1 h-3 w-3" />Revise
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -241,6 +275,70 @@ export default function CommunityReportingTab() {
           </Table></div>
         </>
       )}
+      <Dialog open={reviseOpen} onOpenChange={o => { if (!o && !busy) setReviseOpen(false); }}>
+        <DialogContent className="max-h-[85vh] max-w-xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Revise transaction</DialogTitle>
+            <DialogDescription>
+              Pick one of the allocated transactions, then set the corrected commission. The wallet adjusts by the difference immediately and the revised transaction stays listed under Revised.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Allocated transactions · {from} – {to}</p>
+              <div className="max-h-56 divide-y overflow-y-auto rounded-md border">
+                {allocatedRows.map(r => (
+                  <label key={r.id} className="flex cursor-pointer items-center justify-between gap-3 p-2 text-sm hover:bg-muted/50">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <input type="radio" name="revise-tx" className="accent-primary" checked={selectedId === r.id}
+                        onChange={() => { setSelectedId(r.id); setNewAmount(""); }}
+                        aria-label={`Select ${r.community_name} · ${r.recipient_name || "recipient"}`} />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{r.community_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {TYPE_LABEL[r.recipient_type] ?? r.recipient_type} · {r.recipient_name || "—"} · {r.period_from} – {r.period_to}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="font-semibold">{money(r.amount)}</p>
+                      {isRevised(r) && <p className="text-xs text-muted-foreground">was {money(Number(r.original_amount) || 0)}</p>}
+                    </div>
+                  </label>
+                ))}
+                {allocatedRows.length === 0 && (
+                  <p className="p-3 text-xs text-muted-foreground">No allocated transactions for this period yet.</p>
+                )}
+              </div>
+            </div>
+            {selected && (
+              <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div><p className="text-muted-foreground">Current commission</p><p className="font-semibold">{money(selected.amount)}</p></div>
+                  <div><p className="text-muted-foreground">Originally allocated</p><p className="font-semibold">{money(selected.original_amount ?? selected.amount)}</p></div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="revise-amount">New commission (₹)</Label>
+                  <Input id="revise-amount" type="number" min="0.01" step="0.01" value={newAmount} onChange={e => setNewAmount(e.target.value)} disabled={busy} />
+                </div>
+                <p className="text-xs">
+                  {!change ? "Enter a different positive amount to see the wallet effect."
+                    : change.delta > 0
+                      ? <>Wallet credit of <strong>{money(change.delta)}</strong> to {selected.recipient_name || "the recipient"}.</>
+                      : <>Wallet debit of <strong>{money(Math.abs(change.delta))}</strong> from {selected.recipient_name || "the recipient"}.</>}
+                </p>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" disabled={busy} onClick={() => setReviseOpen(false)}>Cancel</Button>
+                  <Button size="sm" disabled={busy || !change} onClick={() => void submitRevise()}>
+                    {busy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <PencilLine className="mr-1 h-4 w-4" />}Save revision
+                  </Button>
+                </div>
+              </div>
+            )}
+            {!selected && <p className="text-xs text-muted-foreground">Select a transaction above to revise it. Revised ones stay in the list and under the Revised card.</p>}
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
