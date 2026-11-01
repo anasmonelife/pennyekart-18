@@ -24,6 +24,7 @@ interface SavedRow {
 }
 interface Props { roles?: { id: string; name: string }[]; rules: Record<string, CommissionRule>; fallbackRate: number; ready: boolean }
 const money = (n: number) => `₹${Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const isRevised = (r: SavedRow) => (r.revision_count ?? 0) > 0;
 const TYPE_LABEL: Record<string, string> = { creator: "Creator", group_leader: "Group leader", coordinator: "Coordinator", team_leader: "Team leader", super_admin: "Super admin partner" };
 
 export default function CommunityCommissionTable({ roles = [], rules, fallbackRate, ready }: Props) {
@@ -47,7 +48,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
     const { data, error } = await db.from("community_commission_allocations").select("*")
       .lte("period_from", to).gte("period_to", from).order("created_at", { ascending: false });
     if (error) setError(error.message);
-    else setRows(((data ?? []) as SavedRow[]).filter(r => r.period_from === from && r.period_to === to && r.status !== "allocated"));
+    else setRows(((data ?? []) as SavedRow[]).filter(r => r.period_from === from && r.period_to === to && (r.status !== "allocated" || isRevised(r))));
     setLoading(false);
   }, [from, to, ready, validPeriod]);
   useEffect(() => { void load(); }, [load]);
