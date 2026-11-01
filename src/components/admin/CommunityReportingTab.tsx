@@ -167,6 +167,11 @@ export default function CommunityReportingTab() {
           </select>
         </div>
         <div className="space-y-1 min-w-[200px] flex-1 max-w-xs"><Label htmlFor="report-search">Search</Label><Input id="report-search" placeholder="Community or recipient" value={search} onChange={e => setSearch(e.target.value)} /></div>
+        <div className="space-y-1"><Label htmlFor="report-revise" className="opacity-0">Revise</Label>
+          <Button id="report-revise" size="sm" variant="outline" onClick={() => openRevise()} disabled={!validPeriod || allocatedRows.length === 0}>
+            <PencilLine className="mr-2 h-4 w-4" />Revise transaction
+          </Button>
+        </div>
         <div className="space-y-1"><Label htmlFor="report-export" className="opacity-0">Export</Label>
           <Button id="report-export" size="sm" variant="outline" onClick={() => void exportCsv()} disabled={exporting || !validPeriod || filtered.length === 0}>
             {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}Export CSV
