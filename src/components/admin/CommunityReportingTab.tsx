@@ -117,7 +117,7 @@ export default function CommunityReportingTab() {
     <section className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">Commission reporting</h2>
-        <p className="text-xs text-muted-foreground">Saved allocation rows by period, role and status — pending, verified and allocated commission.</p>
+        <p className="text-xs text-muted-foreground">Saved allocation rows by period, role and status — pending, allocated and revised commission.</p>
       </div>
       <div className="flex flex-wrap gap-3">
         <div className="space-y-1"><Label htmlFor="report-from">Period from</Label><Input id="report-from" type="date" value={from} max={to || today} onChange={e => setFrom(e.target.value)} /></div>
@@ -134,9 +134,10 @@ export default function CommunityReportingTab() {
         <div className="space-y-1"><Label htmlFor="report-status">Status</Label>
           <select id="report-status" className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={status} onChange={e => setStatus(e.target.value)}>
             <option value="all">All statuses</option>
-            <option value="pending">Pending verification</option>
-            <option value="verified">Verified</option>
+            <option value="pending">Pending</option>
             <option value="allocated">Allocated</option>
+            <option value="revised">Revised</option>
+            <option value="verified">Verified (awaiting allocation)</option>
           </select>
         </div>
         <div className="space-y-1 min-w-[200px] flex-1 max-w-xs"><Label htmlFor="report-search">Search</Label><Input id="report-search" placeholder="Community or recipient" value={search} onChange={e => setSearch(e.target.value)} /></div>
