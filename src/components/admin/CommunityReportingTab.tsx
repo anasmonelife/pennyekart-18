@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Download, Loader2, PencilLine } from "lucide-react";
 import { toast } from "sonner";
 
-const db = supabase as unknown as { from: (t: string) => any };
+const db = supabase as unknown as { from: (t: string) => any; rpc: (fn: string, a?: Record<string, unknown>) => any };
 
 interface ReportRow {
   id: string; community_id: string; community_name: string; customer_user_id: string | null;
