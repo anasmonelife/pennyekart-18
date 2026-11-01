@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { commissionRateForRole, type CommissionRule } from "@/lib/communityCommission";
-import { commissionAmount, commissionDate, commissionRange, reviseCommissionChange } from "@/lib/commissionPayout";
+import { commissionAmount, commissionDate, commissionRange } from "@/lib/commissionPayout";
 import { buildGroupLeaderRows, buildHierarchyRows, groupAllocationRows, rateRoleName, type AreaCommunity, type PayoutRow } from "@/lib/commissionAllocation";
 import { isAllocationRole, normalizeRoleName, type AllocationPerson } from "@/lib/elifeAllocation";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CheckCircle2, ChevronDown, ChevronRight, Loader2, Pencil, RefreshCw, Wallet } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, Loader2, RefreshCw, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 const db = supabase as unknown as { from: (t: string) => any; rpc: (fn: string, a?: Record<string, unknown>) => any; functions: typeof supabase.functions };
@@ -36,10 +36,8 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<SavedRow | null>(null);
-  const [revise, setRevise] = useState<SavedRow | null>(null);
-  const [reviseValue, setReviseValue] = useState("");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "verified" | "allocated">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "verified">("all");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const validPeriod = !!from && !!to && from <= to && to <= today;
 
@@ -49,7 +47,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
     const { data, error } = await db.from("community_commission_allocations").select("*")
       .lte("period_from", to).gte("period_to", from).order("created_at", { ascending: false });
     if (error) setError(error.message);
-    else setRows(((data ?? []) as SavedRow[]).filter(r => r.status === "allocated" || (r.period_from === from && r.period_to === to)));
+    else setRows(((data ?? []) as SavedRow[]).filter(r => r.period_from === from && r.period_to === to && r.status !== "allocated"));
     setLoading(false);
   }, [from, to, ready, validPeriod]);
   useEffect(() => { void load(); }, [load]);
@@ -125,18 +123,6 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
     toast.success("Sales commission credited to wallet");
     setConfirm(null); await load();
   };
-  /** Change an already-allocated commission: the database adjusts the wallet by the difference. */
-  const applyRevise = async () => {
-    if (!revise) return;
-    const change = reviseCommissionChange(Number(revise.amount), Number(reviseValue));
-    if (!change) return toast.error("Enter a new amount different from the allocated one");
-    setBusy(true);
-    const { error } = await db.rpc("revise_commission_allocation", { _id: revise.id, _new_amount: change.amount });
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success("Commission revised and the wallet was adjusted");
-    setRevise(null); await load();
-  };
 
   /** One row per community: creator + hierarchy allocations of the same period stay together. */
   const groups = groupAllocationRows(rows).filter(g => {
@@ -156,27 +142,15 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
   );
   const statusLine = (r: SavedRow) => (
     <div key={`status-${r.id}`}>
-      {r.status === "allocated" ? <>
-        <Badge variant="secondary">Allocated</Badge>
-        <p className="text-xs text-muted-foreground mt-1">{r.allocated_at && new Date(r.allocated_at).toLocaleString("en-IN")}</p>
-      </> : <Badge variant="outline">{r.status === "verified" ? "Verified" : "Pending verification"}</Badge>}
+      <Badge variant="outline">{r.status === "verified" ? "Verified" : "Pending verification"}</Badge>
     </div>
   );
   const actionLine = (r: SavedRow) => {
-    const done = r.status === "allocated";
     const amount = amountOf(r);
     return (
       <div key={`action-${r.id}`} className="space-x-1 whitespace-nowrap">
-        {!done && <>
-          <Button size="sm" variant="outline" disabled={busy || !(amount > 0)} onClick={() => void verify(r)}><CheckCircle2 className="mr-1 h-4 w-4" />Verify</Button>
-          <Button size="sm" disabled={busy || r.status !== "verified" || !r.customer_user_id || edits[r.id] !== undefined} onClick={() => setConfirm(r)}><Wallet className="mr-1 h-4 w-4" />Allocate</Button>
-        </>}
-        {done && (
-          <Button size="sm" variant="outline" disabled={busy || !r.customer_user_id}
-            onClick={() => { setRevise(r); setReviseValue(Number(r.amount).toFixed(2)); }}>
-            <Pencil className="mr-1 h-4 w-4" />Revise
-          </Button>
-        )}
+        <Button size="sm" variant="outline" disabled={busy || !(amount > 0)} onClick={() => void verify(r)}><CheckCircle2 className="mr-1 h-4 w-4" />Verify</Button>
+        <Button size="sm" disabled={busy || r.status !== "verified" || !r.customer_user_id || edits[r.id] !== undefined} onClick={() => setConfirm(r)}><Wallet className="mr-1 h-4 w-4" />Allocate</Button>
       </div>
     );
   };
@@ -185,7 +159,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
     <section className="space-y-4 border-b pb-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><h2 className="text-lg font-semibold">Allocation table</h2>
-          <p className="text-xs text-muted-foreground">Community profit shared to creator, group leader (a same-ward Pro's community), coordinator (wards), team leader and super admin partner (panchayaths). Tap a community to expand its allocations. Sales outside communities are not shared.</p></div>
+          <p className="text-xs text-muted-foreground">Community profit shared to creator, group leader (a same-ward Pro's community), coordinator (wards), team leader and super admin partner (panchayaths). Only pending calculations are shown here — allocated commission details and revisions are in the Commission reporting tab.</p></div>
         <Button size="sm" onClick={() => void calculate()} disabled={busy || !ready || !validPeriod}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Calculate &amp; save</Button>
       </div>
       <div className="flex flex-wrap gap-3">
@@ -194,10 +168,9 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
         <div className="space-y-1 min-w-[220px] flex-1 max-w-xs"><Label htmlFor="allocation-search">Search</Label><Input id="allocation-search" placeholder="Community or recipient" value={search} onChange={e => setSearch(e.target.value)} /></div>
         <div className="space-y-1"><Label htmlFor="allocation-status">Status</Label>
           <select id="allocation-status" className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}>
-            <option value="all">All statuses</option>
+            <option value="all">All pending</option>
             <option value="pending">Pending verification</option>
             <option value="verified">Verified</option>
-            <option value="allocated">Allocated</option>
           </select>
         </div>
       </div>
@@ -230,9 +203,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
                         </Button>
                         <div>
                           <p>{g.community_name}</p>
-                          {(g.period_from !== from || g.period_to !== to) && (
-                            <p className="text-xs text-muted-foreground">{g.period_from} – {g.period_to}</p>
-                          )}
+                          <p className="text-xs text-muted-foreground">{g.period_from} – {g.period_to}</p>
                         </div>
                       </div>
                     </TableCell>
@@ -249,7 +220,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
                       <TableCell className="align-top">{recipientLine(r)}</TableCell>
                       <TableCell className="text-right align-top text-xs">{r.commission_rate}% · {money(r.calculated_commission)}</TableCell>
                       <TableCell className="align-top">
-                        <Input type="number" min="0.01" step="0.01" aria-label={`Commission for ${r.recipient_name ?? r.community_name}`} className="w-28" value={edits[r.id] ?? Number(r.amount).toFixed(2)} onChange={e => setEdits(p => ({ ...p, [r.id]: e.target.value }))} disabled={r.status === "allocated" || busy} />
+                        <Input type="number" min="0.01" step="0.01" aria-label={`Commission for ${r.recipient_name ?? r.community_name}`} className="w-28" value={edits[r.id] ?? Number(r.amount).toFixed(2)} onChange={e => setEdits(p => ({ ...p, [r.id]: e.target.value }))} disabled={busy} />
                       </TableCell>
                       <TableCell className="align-top">{statusLine(r)}</TableCell>
                       <TableCell className="align-top">{actionLine(r)}</TableCell>
@@ -258,7 +229,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
                 </Fragment>
               );
             })}
-            {groups.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">{rows.length > 0 ? "No rows match the current filters." : "Nothing saved for this period. Click “Calculate & save”."}</TableCell></TableRow>}
+            {groups.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">{rows.length > 0 ? "No rows match the current filters." : "Nothing pending for this period yet. Click “Calculate & save” — allocated commission details are in the Commission reporting tab."}</TableRow></TableCell>}
           </TableBody>
         </Table></div>
       )}
@@ -266,23 +237,6 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
         <DialogContent><DialogHeader><DialogTitle>Allocate sales commission?</DialogTitle><DialogDescription>{confirm?.community_name} · {from} – {to}</DialogDescription></DialogHeader>
           {confirm && <p className="text-sm">Credit <strong>{money(confirm.amount)}</strong> to {confirm.recipient_name || "this person"} ({TYPE_LABEL[confirm.recipient_type]})'s wallet?</p>}
           <div className="flex justify-end gap-2"><Button variant="outline" disabled={busy} onClick={() => setConfirm(null)}>Cancel</Button><Button disabled={busy} onClick={() => void allocate()}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Confirm allocation</Button></div>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={!!revise} onOpenChange={o => { if (!o && !busy) setRevise(null); }}>
-        <DialogContent><DialogHeader><DialogTitle>Revise allocated commission?</DialogTitle><DialogDescription>{revise?.community_name} · {revise?.period_from} – {revise?.period_to}</DialogDescription></DialogHeader>
-          {revise && <>
-            <p className="text-sm">Allocated: <strong>{money(revise.amount)}</strong> to {revise.recipient_name || "this person"} ({TYPE_LABEL[revise.recipient_type]}).</p>
-            <div className="space-y-1">
-              <Label htmlFor="revise-amount">New commission (₹)</Label>
-              <Input id="revise-amount" type="number" min="0.01" step="0.01" value={reviseValue} onChange={e => setReviseValue(e.target.value)} disabled={busy} />
-            </div>
-            {reviseCommissionChange(Number(revise.amount), Number(reviseValue)) && (
-              <p className="text-xs text-muted-foreground">
-                The wallet will be {reviseCommissionChange(Number(revise.amount), Number(reviseValue))!.delta > 0 ? "credited" : "debited"} {money(Math.abs(reviseCommissionChange(Number(revise.amount), Number(reviseValue))!.delta))} right away.
-              </p>
-            )}
-            <div className="flex justify-end gap-2"><Button variant="outline" disabled={busy} onClick={() => setRevise(null)}>Cancel</Button><Button disabled={busy || !reviseCommissionChange(Number(revise.amount), Number(reviseValue))} onClick={() => void applyRevise()}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Confirm revision</Button></div>
-          </>}
         </DialogContent>
       </Dialog>
     </section>
