@@ -137,10 +137,9 @@ export default function CommunityReportingTab() {
         <div className="space-y-1"><Label htmlFor="report-status">Status</Label>
           <select id="report-status" className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={status} onChange={e => setStatus(e.target.value)}>
             <option value="all">All statuses</option>
-            <option value="pending">Pending</option>
+            <option value="pending">Pending (incl. verified)</option>
             <option value="allocated">Allocated</option>
             <option value="revised">Revised</option>
-            <option value="verified">Verified (awaiting allocation)</option>
           </select>
         </div>
         <div className="space-y-1 min-w-[200px] flex-1 max-w-xs"><Label htmlFor="report-search">Search</Label><Input id="report-search" placeholder="Community or recipient" value={search} onChange={e => setSearch(e.target.value)} /></div>
