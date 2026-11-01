@@ -275,6 +275,70 @@ export default function CommunityReportingTab() {
           </Table></div>
         </>
       )}
+      <Dialog open={reviseOpen} onOpenChange={o => { if (!o && !busy) setReviseOpen(false); }}>
+        <DialogContent className="max-h-[85vh] max-w-xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Revise transaction</DialogTitle>
+            <DialogDescription>
+              Pick one of the allocated transactions, then set the corrected commission. The wallet adjusts by the difference immediately and the revised transaction stays listed under Revised.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Allocated transactions · {from} – {to}</p>
+              <div className="max-h-56 divide-y overflow-y-auto rounded-md border">
+                {allocatedRows.map(r => (
+                  <label key={r.id} className="flex cursor-pointer items-center justify-between gap-3 p-2 text-sm hover:bg-muted/50">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <input type="radio" name="revise-tx" className="accent-primary" checked={selectedId === r.id}
+                        onChange={() => { setSelectedId(r.id); setNewAmount(""); }}
+                        aria-label={`Select ${r.community_name} · ${r.recipient_name || "recipient"}`} />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{r.community_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {TYPE_LABEL[r.recipient_type] ?? r.recipient_type} · {r.recipient_name || "—"} · {r.period_from} – {r.period_to}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="font-semibold">{money(r.amount)}</p>
+                      {isRevised(r) && <p className="text-xs text-muted-foreground">was {money(Number(r.original_amount) || 0)}</p>}
+                    </div>
+                  </label>
+                ))}
+                {allocatedRows.length === 0 && (
+                  <p className="p-3 text-xs text-muted-foreground">No allocated transactions for this period yet.</p>
+                )}
+              </div>
+            </div>
+            {selected && (
+              <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div><p className="text-muted-foreground">Current commission</p><p className="font-semibold">{money(selected.amount)}</p></div>
+                  <div><p className="text-muted-foreground">Originally allocated</p><p className="font-semibold">{money(selected.original_amount ?? selected.amount)}</p></div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="revise-amount">New commission (₹)</Label>
+                  <Input id="revise-amount" type="number" min="0.01" step="0.01" value={newAmount} onChange={e => setNewAmount(e.target.value)} disabled={busy} />
+                </div>
+                <p className="text-xs">
+                  {!change ? "Enter a different positive amount to see the wallet effect."
+                    : change.delta > 0
+                      ? <>Wallet credit of <strong>{money(change.delta)}</strong> to {selected.recipient_name || "the recipient"}.</>
+                      : <>Wallet debit of <strong>{money(Math.abs(change.delta))}</strong> from {selected.recipient_name || "the recipient"}.</>}
+                </p>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" disabled={busy} onClick={() => setReviseOpen(false)}>Cancel</Button>
+                  <Button size="sm" disabled={busy || !change} onClick={() => void submitRevise()}>
+                    {busy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <PencilLine className="mr-1 h-4 w-4" />}Save revision
+                  </Button>
+                </div>
+              </div>
+            )}
+            {!selected && <p className="text-xs text-muted-foreground">Select a transaction above to revise it. Revised ones stay in the list and under the Revised card.</p>}
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
