@@ -153,15 +153,36 @@ export default function CommunityReportingTab() {
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       {loading ? <Loader2 aria-label="Loading report" className="h-5 w-5 animate-spin" /> : validPeriod && (
         <>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {([
+              { key: "pending" as const, label: "Pending", count: kpi.pendingCount, amount: kpi.pending,
+                note: "Calculated but not yet paid — includes verified rows" },
+              { key: "allocated" as const, label: "Allocated", count: kpi.allocatedCount, amount: kpi.allocated,
+                note: "Paid out as originally calculated" },
+              { key: "revised" as const, label: "Revised", count: kpi.revisedCount, amount: kpi.revised,
+                note: kpi.revisedCount > 0 ? `${money(kpi.revisedOriginal)} → ${money(kpi.revised)}` : "Allocated, then adjusted later" },
+            ]).map(card => {
+              const active = status === card.key;
+              return (
+                <button key={card.key} type="button" onClick={() => setStatus(active ? "all" : card.key)}
+                  aria-pressed={active} aria-label={`Filter report to ${card.label} commission`}
+                  className={`rounded-lg border p-4 text-left transition-colors ${active ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border bg-card hover:bg-muted/50"}`}>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{card.label}</p>
+                    <Badge variant={active ? "default" : "secondary"}>{card.count} row{card.count === 1 ? "" : "s"}</Badge>
+                  </div>
+                  <p className="mt-1 text-xl font-bold sm:text-2xl">{money(card.amount)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{card.note}</p>
+                </button>
+              );
+            })}
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
               { label: "Communities", value: String(kpi.communities) },
               { label: "Allocation rows", value: String(kpi.rows) },
               { label: "Profit shared", value: money(kpi.totalProfit) },
               { label: "Total commission", value: money(kpi.total) },
-              { label: "Pending", value: money(kpi.pending) },
-              { label: "Allocated", value: money(kpi.allocated) },
-              { label: "Revised", value: money(kpi.revised) },
             ].map(s => (
               <div key={s.label} className="rounded-md bg-muted/50 p-2 text-center">
                 <p className="text-sm font-bold sm:text-base">{s.value}</p>
