@@ -21,10 +21,11 @@ interface ReportRow {
   status: "pending" | "verified" | "allocated"; allocated_at: string | null; created_at: string;
 }
 
-const TYPE_LABEL: Record<string, string> = { creator: "Creator", coordinator: "Coordinator", team_leader: "Team leader", super_admin: "Super admin partner" };
+const TYPE_LABEL: Record<string, string> = { creator: "Creator", group_leader: "Group leader", coordinator: "Coordinator", team_leader: "Team leader", super_admin: "Super admin partner" };
 const STATUS_LABEL: Record<string, string> = { pending: "Pending", verified: "Verified", allocated: "Allocated" };
 const isRevised = (r: ReportRow) => (r.revision_count ?? 0) > 0;
 const rowStatusLabel = (r: ReportRow) => (isRevised(r) ? "Revised" : STATUS_LABEL[r.status]);
+const rowCategory = (r: ReportRow): "pending" | "allocated" | "revised" => (isRevised(r) ? "revised" : r.status === "allocated" ? "allocated" : "pending");
 const money = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function CommunityReportingTab() {
@@ -56,10 +57,7 @@ export default function CommunityReportingTab() {
     const q = search.trim().toLowerCase();
     return rows.filter(r =>
       (role === "all" || r.recipient_type === role) &&
-      (status === "all" ||
-        (status === "revised" ? isRevised(r) : r.status === status) ||
-        // Pending covers everything not yet allocated — unverified and verified rows.
-        (status === "pending" && !isRevised(r) && (r.status === "pending" || r.status === "verified"))) &&
+      (status === "all" || rowCategory(r) === status) &&
       (!q || r.community_name.toLowerCase().includes(q)
         || (r.recipient_name ?? "").toLowerCase().includes(q)
         || (r.recipient_mobile ?? "").includes(q)));
@@ -68,19 +66,23 @@ export default function CommunityReportingTab() {
   const kpi = useMemo(() => {
     const profit = new Map<string, number>();
     const communities = new Set<string>();
-    let total = 0, pending = 0, allocated = 0, revised = 0, revisedCount = 0;
+    let total = 0, pending = 0, pendingCount = 0, allocated = 0, allocatedCount = 0;
+    let revised = 0, revisedCount = 0, revisedOriginal = 0;
     for (const r of filtered) {
       const key = `${r.community_id}|${r.period_from}|${r.period_to}`;
       communities.add(key);
       if (!profit.has(key)) profit.set(key, Number(r.total_profit) || 0);
       const amt = Number(r.amount) || 0;
       total += amt;
-      if (isRevised(r)) { revised += amt; revisedCount += 1; }
-      else if (r.status === "allocated") allocated += amt;
-      else pending += amt; // pending + verified rows await allocation
+      const category = rowCategory(r);
+      if (category === "revised") {
+        revised += amt; revisedCount += 1;
+        revisedOriginal += Number(r.original_amount) || 0;
+      } else if (category === "allocated") { allocated += amt; allocatedCount += 1; }
+      else { pending += amt; pendingCount += 1; }
     }
     const totalProfit = [...profit.values()].reduce((s, v) => s + v, 0);
-    return { rows: filtered.length, communities: communities.size, totalProfit, total, pending, allocated, revised, revisedCount };
+    return { rows: filtered.length, communities: communities.size, totalProfit, total, pending, pendingCount, allocated, allocatedCount, revised, revisedCount, revisedOriginal };
   }, [filtered]);
 
   /** Commission total per role for the filtered rows. */
@@ -126,6 +128,7 @@ export default function CommunityReportingTab() {
           <select id="report-role" className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={role} onChange={e => setRole(e.target.value)}>
             <option value="all">All roles</option>
             <option value="creator">Creator</option>
+            <option value="group_leader">Group leader</option>
             <option value="coordinator">Coordinator</option>
             <option value="team_leader">Team leader</option>
             <option value="super_admin">Super admin partner</option>
@@ -134,10 +137,9 @@ export default function CommunityReportingTab() {
         <div className="space-y-1"><Label htmlFor="report-status">Status</Label>
           <select id="report-status" className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={status} onChange={e => setStatus(e.target.value)}>
             <option value="all">All statuses</option>
-            <option value="pending">Pending</option>
+            <option value="pending">Pending (incl. verified)</option>
             <option value="allocated">Allocated</option>
             <option value="revised">Revised</option>
-            <option value="verified">Verified (awaiting allocation)</option>
           </select>
         </div>
         <div className="space-y-1 min-w-[200px] flex-1 max-w-xs"><Label htmlFor="report-search">Search</Label><Input id="report-search" placeholder="Community or recipient" value={search} onChange={e => setSearch(e.target.value)} /></div>
@@ -151,15 +153,36 @@ export default function CommunityReportingTab() {
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       {loading ? <Loader2 aria-label="Loading report" className="h-5 w-5 animate-spin" /> : validPeriod && (
         <>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {([
+              { key: "pending" as const, label: "Pending", count: kpi.pendingCount, amount: kpi.pending,
+                note: "Calculated but not yet paid — includes verified rows" },
+              { key: "allocated" as const, label: "Allocated", count: kpi.allocatedCount, amount: kpi.allocated,
+                note: "Paid out as originally calculated" },
+              { key: "revised" as const, label: "Revised", count: kpi.revisedCount, amount: kpi.revised,
+                note: kpi.revisedCount > 0 ? `${money(kpi.revisedOriginal)} → ${money(kpi.revised)}` : "Allocated, then adjusted later" },
+            ]).map(card => {
+              const active = status === card.key;
+              return (
+                <button key={card.key} type="button" onClick={() => setStatus(active ? "all" : card.key)}
+                  aria-pressed={active} aria-label={`Filter report to ${card.label} commission`}
+                  className={`rounded-lg border p-4 text-left transition-colors ${active ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border bg-card hover:bg-muted/50"}`}>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{card.label}</p>
+                    <Badge variant={active ? "default" : "secondary"}>{card.count} row{card.count === 1 ? "" : "s"}</Badge>
+                  </div>
+                  <p className="mt-1 text-xl font-bold sm:text-2xl">{money(card.amount)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{card.note}</p>
+                </button>
+              );
+            })}
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
               { label: "Communities", value: String(kpi.communities) },
               { label: "Allocation rows", value: String(kpi.rows) },
               { label: "Profit shared", value: money(kpi.totalProfit) },
               { label: "Total commission", value: money(kpi.total) },
-              { label: "Pending", value: money(kpi.pending) },
-              { label: "Allocated", value: money(kpi.allocated) },
-              { label: "Revised", value: money(kpi.revised) },
             ].map(s => (
               <div key={s.label} className="rounded-md bg-muted/50 p-2 text-center">
                 <p className="text-sm font-bold sm:text-base">{s.value}</p>
