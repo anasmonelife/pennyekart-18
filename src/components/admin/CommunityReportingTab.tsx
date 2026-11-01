@@ -158,8 +158,8 @@ export default function CommunityReportingTab() {
               { label: "Profit shared", value: money(kpi.totalProfit) },
               { label: "Total commission", value: money(kpi.total) },
               { label: "Pending", value: money(kpi.pending) },
-              { label: "Verified", value: money(kpi.verified) },
               { label: "Allocated", value: money(kpi.allocated) },
+              { label: "Revised", value: money(kpi.revised) },
             ].map(s => (
               <div key={s.label} className="rounded-md bg-muted/50 p-2 text-center">
                 <p className="text-sm font-bold sm:text-base">{s.value}</p>
@@ -196,8 +196,14 @@ export default function CommunityReportingTab() {
                   <TableCell className="text-right text-xs">{money(r.calculated_commission)}</TableCell>
                   <TableCell className="text-right font-medium">{money(r.amount)}</TableCell>
                   <TableCell>
-                    <Badge variant={r.status === "allocated" ? "secondary" : "outline"}>{STATUS_LABEL[r.status]}</Badge>
-                    {r.status === "allocated" && r.allocated_at && (
+                    <Badge variant={r.status === "allocated" ? "secondary" : "outline"}>{rowStatusLabel(r)}</Badge>
+                    {isRevised(r) && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {money(Number(r.original_amount) || 0)} → {money(r.amount)} · {r.revision_count} revision{r.revision_count === 1 ? "" : "s"}
+                        {r.revised_at ? ` · ${new Date(r.revised_at).toLocaleString("en-IN")}` : ""}
+                      </p>
+                    )}
+                    {!isRevised(r) && r.status === "allocated" && r.allocated_at && (
                       <p className="text-xs text-muted-foreground mt-1">{new Date(r.allocated_at).toLocaleString("en-IN")}</p>
                     )}
                   </TableCell>
