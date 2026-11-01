@@ -486,11 +486,15 @@ export type Database = {
           customer_user_id: string | null
           elife_person_id: string | null
           id: string
+          original_amount: number | null
           period_from: string
           period_to: string
           recipient_mobile: string | null
           recipient_name: string | null
           recipient_type: string
+          revised_amount: number | null
+          revised_at: string | null
+          revision_count: number
           share_count: number
           status: string
           total_profit: number
@@ -510,11 +514,15 @@ export type Database = {
           customer_user_id?: string | null
           elife_person_id?: string | null
           id?: string
+          original_amount?: number | null
           period_from: string
           period_to: string
           recipient_mobile?: string | null
           recipient_name?: string | null
           recipient_type?: string
+          revised_amount?: number | null
+          revised_at?: string | null
+          revision_count?: number
           share_count?: number
           status?: string
           total_profit: number
@@ -534,11 +542,15 @@ export type Database = {
           customer_user_id?: string | null
           elife_person_id?: string | null
           id?: string
+          original_amount?: number | null
           period_from?: string
           period_to?: string
           recipient_mobile?: string | null
           recipient_name?: string | null
           recipient_type?: string
+          revised_amount?: number | null
+          revised_at?: string | null
+          revision_count?: number
           share_count?: number
           status?: string
           total_profit?: number
