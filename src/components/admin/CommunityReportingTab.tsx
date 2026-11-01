@@ -21,10 +21,11 @@ interface ReportRow {
   status: "pending" | "verified" | "allocated"; allocated_at: string | null; created_at: string;
 }
 
-const TYPE_LABEL: Record<string, string> = { creator: "Creator", coordinator: "Coordinator", team_leader: "Team leader", super_admin: "Super admin partner" };
+const TYPE_LABEL: Record<string, string> = { creator: "Creator", group_leader: "Group leader", coordinator: "Coordinator", team_leader: "Team leader", super_admin: "Super admin partner" };
 const STATUS_LABEL: Record<string, string> = { pending: "Pending", verified: "Verified", allocated: "Allocated" };
 const isRevised = (r: ReportRow) => (r.revision_count ?? 0) > 0;
 const rowStatusLabel = (r: ReportRow) => (isRevised(r) ? "Revised" : STATUS_LABEL[r.status]);
+const rowCategory = (r: ReportRow): "pending" | "allocated" | "revised" => (isRevised(r) ? "revised" : r.status === "allocated" ? "allocated" : "pending");
 const money = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function CommunityReportingTab() {
@@ -56,10 +57,7 @@ export default function CommunityReportingTab() {
     const q = search.trim().toLowerCase();
     return rows.filter(r =>
       (role === "all" || r.recipient_type === role) &&
-      (status === "all" ||
-        (status === "revised" ? isRevised(r) : r.status === status) ||
-        // Pending covers everything not yet allocated — unverified and verified rows.
-        (status === "pending" && !isRevised(r) && (r.status === "pending" || r.status === "verified"))) &&
+      (status === "all" || rowCategory(r) === status) &&
       (!q || r.community_name.toLowerCase().includes(q)
         || (r.recipient_name ?? "").toLowerCase().includes(q)
         || (r.recipient_mobile ?? "").includes(q)));
