@@ -229,7 +229,7 @@ export default function CommunityCommissionTable({ roles = [], rules, fallbackRa
                 </Fragment>
               );
             })}
-            {groups.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">{rows.length > 0 ? "No rows match the current filters." : "Nothing pending for this period yet. Click “Calculate & save” — allocated commission details are in the Commission reporting tab."}</TableRow></TableCell>}
+            {groups.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">{rows.length > 0 ? "No rows match the current filters." : "Nothing pending for this period yet. Click “Calculate & save” — allocated commission details are in the Commission reporting tab."}</TableCell></TableRow>}
           </TableBody>
         </Table></div>
       )}
