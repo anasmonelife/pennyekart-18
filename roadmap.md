@@ -157,3 +157,10 @@
 - [x] Commission allocation table filters: search by community or recipient, and a status filter (all / pending / verified / allocated).
 - [x] Fix the two failing tests (wallet date format, allocation-tab mock missing lte/gte + mock call leakage) — full suite 69/69 passes; production build OK.
 - [ ] Verify the allocation-table collapse view on /admin/communities in a signed-in super admin session (blocked: external Supabase gives no test sign-in).
+
+## Revise allocated commission (/admin/communities)
+- [x] Database: super-admin-only `revise_commission_allocation` re-prices an allocated row, adjusts the wallet by the difference (refuses a reduction larger than the balance) and records original/revised amounts, count and time.
+- [x] Allocation table: Revise button + confirmation dialog on allocated rows; wallet impact shown before saving.
+- [x] Reporting tab: commission split into Pending / Allocated / Revised, Revised status filter, Revised badge with old → new, revision count and time, CSV labels.
+- [x] Focused tests pass (commissionPayout revise math incl. rounding, debit, and invalid inputs); build OK.
+- [ ] Verify the revise flow in a signed-in super admin session with a real allocated row (blocked: external Supabase gives no test sign-in).
