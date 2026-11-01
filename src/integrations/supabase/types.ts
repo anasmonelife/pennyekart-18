@@ -479,6 +479,8 @@ export type Database = {
           allocated_by: string | null
           amount: number
           calculated_commission: number
+          cancel_count: number
+          cancelled_at: string | null
           commission_rate: number
           community_id: string | null
           community_name: string
@@ -507,6 +509,8 @@ export type Database = {
           allocated_by?: string | null
           amount: number
           calculated_commission: number
+          cancel_count?: number
+          cancelled_at?: string | null
           commission_rate: number
           community_id?: string | null
           community_name: string
@@ -535,6 +539,8 @@ export type Database = {
           allocated_by?: string | null
           amount?: number
           calculated_commission?: number
+          cancel_count?: number
+          cancelled_at?: string | null
           commission_rate?: number
           community_id?: string | null
           community_name?: string
@@ -3046,6 +3052,7 @@ export type Database = {
       anonymize_user_data: { Args: { _uid: string }; Returns: undefined }
       auto_cancel_stale_utility_requests: { Args: never; Returns: number }
       can_use_community: { Args: never; Returns: boolean }
+      cancel_commission_allocation: { Args: { _id: string }; Returns: number }
       cancel_community_invite: {
         Args: { _invite_id: string }
         Returns: boolean
