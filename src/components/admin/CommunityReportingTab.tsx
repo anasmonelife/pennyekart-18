@@ -16,12 +16,14 @@ interface ReportRow {
   id: string; community_id: string; community_name: string; customer_user_id: string | null;
   recipient_type: string; recipient_name: string | null; recipient_mobile: string | null;
   total_profit: number; commission_rate: number; calculated_commission: number; amount: number;
+  original_amount: number | null; revision_count: number; revised_at: string | null;
   share_count: number; period_from: string; period_to: string;
   status: "pending" | "verified" | "allocated"; allocated_at: string | null; created_at: string;
 }
 
 const TYPE_LABEL: Record<string, string> = { creator: "Creator", coordinator: "Coordinator", team_leader: "Team leader", super_admin: "Super admin partner" };
 const STATUS_LABEL: Record<string, string> = { pending: "Pending", verified: "Verified", allocated: "Allocated" };
+const isRevised = (r: ReportRow) => (r.revision_count ?? 0) > 0;
 const money = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function CommunityReportingTab() {
@@ -53,7 +55,10 @@ export default function CommunityReportingTab() {
     const q = search.trim().toLowerCase();
     return rows.filter(r =>
       (role === "all" || r.recipient_type === role) &&
-      (status === "all" || r.status === status) &&
+      (status === "all" ||
+        (status === "revised" ? isRevised(r) : r.status === status) ||
+        // Pending covers everything not yet allocated — unverified and verified rows.
+        (status === "pending" && !isRevised(r) && (r.status === "pending" || r.status === "verified"))) &&
       (!q || r.community_name.toLowerCase().includes(q)
         || (r.recipient_name ?? "").toLowerCase().includes(q)
         || (r.recipient_mobile ?? "").includes(q)));
@@ -62,19 +67,19 @@ export default function CommunityReportingTab() {
   const kpi = useMemo(() => {
     const profit = new Map<string, number>();
     const communities = new Set<string>();
-    let total = 0, pending = 0, verified = 0, allocated = 0;
+    let total = 0, pending = 0, allocated = 0, revised = 0, revisedCount = 0;
     for (const r of filtered) {
       const key = `${r.community_id}|${r.period_from}|${r.period_to}`;
       communities.add(key);
       if (!profit.has(key)) profit.set(key, Number(r.total_profit) || 0);
       const amt = Number(r.amount) || 0;
       total += amt;
-      if (r.status === "pending") pending += amt;
-      else if (r.status === "verified") verified += amt;
-      else allocated += amt;
+      if (isRevised(r)) { revised += amt; revisedCount += 1; }
+      else if (r.status === "allocated") allocated += amt;
+      else pending += amt; // pending + verified rows await allocation
     }
     const totalProfit = [...profit.values()].reduce((s, v) => s + v, 0);
-    return { rows: filtered.length, communities: communities.size, totalProfit, total, pending, verified, allocated };
+    return { rows: filtered.length, communities: communities.size, totalProfit, total, pending, allocated, revised, revisedCount };
   }, [filtered]);
 
   /** Commission total per role for the filtered rows. */
