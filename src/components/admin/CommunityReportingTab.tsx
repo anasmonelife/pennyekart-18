@@ -101,6 +101,25 @@ export default function CommunityReportingTab() {
     return [...map.entries()].sort((a, b) => b[1].amount - a[1].amount);
   }, [filtered]);
 
+  /** Allocated history for the period: the transactions that can be revised. */
+  const allocatedRows = useMemo(() => rows.filter(r => r.status === "allocated"), [rows]);
+  const selected = allocatedRows.find(r => r.id === selectedId) ?? null;
+  const change = selected && newAmount.trim() !== "" ? reviseCommissionChange(Number(selected.amount), Number(newAmount)) : null;
+
+  const openRevise = (id?: string) => { setSelectedId(id ?? null); setNewAmount(""); setReviseOpen(true); };
+
+  const submitRevise = async () => {
+    if (!selected || !change) return;
+    setBusy(true);
+    const { error } = await db.rpc("revise_commission_allocation", { _id: selected.id, _new_amount: change.amount });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success(`Commission revised to ${money(change.amount)} — listed under Revised`);
+    setReviseOpen(false); setSelectedId(null); setNewAmount("");
+    await load();
+  };
+
+
   const exportCsv = async () => {
     setExporting(true);
     try {
