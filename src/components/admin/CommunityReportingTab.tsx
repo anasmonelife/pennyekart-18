@@ -258,6 +258,11 @@ export default function CommunityReportingTab() {
                     {!isRevised(r) && r.status === "allocated" && r.allocated_at && (
                       <p className="text-xs text-muted-foreground mt-1">{new Date(r.allocated_at).toLocaleString("en-IN")}</p>
                     )}
+                    {r.status === "allocated" && (
+                      <Button size="sm" variant="ghost" className="mt-1 h-6 px-2 text-xs" onClick={() => openRevise(r.id)}>
+                        <PencilLine className="mr-1 h-3 w-3" />Revise
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
