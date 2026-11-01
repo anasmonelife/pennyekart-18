@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { commissionDate } from "@/lib/commissionPayout";
+import { commissionDate, reviseCommissionChange } from "@/lib/commissionPayout";
 import { shareOrDownload } from "@/lib/exportFile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, PencilLine } from "lucide-react";
 import { toast } from "sonner";
 
 const db = supabase as unknown as { from: (t: string) => any };
@@ -39,6 +40,10 @@ export default function CommunityReportingTab() {
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [reviseOpen, setReviseOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [newAmount, setNewAmount] = useState("");
+  const [busy, setBusy] = useState(false);
   const validPeriod = !!from && !!to && from <= to && to <= today;
 
   /** Same period rules as the allocation table: saved rows for this period, plus allocated history that overlaps it. */
