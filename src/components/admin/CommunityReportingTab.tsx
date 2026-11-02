@@ -127,9 +127,9 @@ export default function CommunityReportingTab() {
     const row = id ? pendingRows.find(r => r.id === id) : null;
     setVerifyId(row?.id ?? null);
     setVerifyAmount(row ? String(row.amount) : "");
-    setVerifyOpenFlag(true);
+    setVerifyOpen(true);
   };
-  const openAllocate = (id?: string) => { setAllocateId(id ?? null); setAllocateOpenFlag(true); };
+  const openAllocate = (id?: string) => { setAllocateId(id ?? null); setAllocateOpen(true); };
 
   const submitRevise = async () => {
     if (!selected || !change) return;
