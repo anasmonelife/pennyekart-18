@@ -37,6 +37,7 @@ export default function CommunityAccessRequests() {
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
   const [people, setPeople] = useState<Record<string, Applicant>>({});
+  const [places, setPlaces] = useState<Record<string, Place>>({});
   const [choices, setChoices] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -59,8 +60,16 @@ export default function CommunityAccessRequests() {
     setRoles((roleResult.data || []).filter(r => isCommunityRole(r.name)));
     const ids = [...new Set((result.data || []).map(r => r.user_id))];
     if (ids.length) {
-      const { data } = await supabase.from("profiles").select("user_id,full_name,mobile_number").in("user_id", ids);
+      const { data } = await supabase.from("profiles").select("user_id,full_name,mobile_number,local_body_id,ward_number").in("user_id", ids);
       setPeople(Object.fromEntries((data || []).map(p => [p.user_id, p])));
+      const bodyIds = [...new Set((data || []).map(p => p.local_body_id).filter(Boolean))] as string[];
+      if (bodyIds.length) {
+        const { data: bodies } = await supabase.from("locations_local_bodies")
+          .select("id, name, locations_districts(name)").in("id", bodyIds);
+        setPlaces(Object.fromEntries((bodies || []).map(b => [b.id, {
+          name: b.name, district: (b as { locations_districts?: { name: string } | null }).locations_districts?.name ?? null,
+        }])));
+      }
     }
     setLoading(false);
   }, []);
