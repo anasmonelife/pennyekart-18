@@ -38,6 +38,9 @@ export interface DisplaySettings {
   sections: Record<SectionKey, boolean>;
   mobileColumns: number;
   desktopColumns: number;
+  mobileRows: number;
+  tabletRows: number;
+  desktopRows: number;
   cardSize: "compact" | "standard" | "large";
   spacing: "compact" | "comfortable";
   defaultTheme: "light" | "dark" | "system";
