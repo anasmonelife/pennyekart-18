@@ -47,6 +47,11 @@ export default function CommunityReportingTab() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
+  const [verifyId, setVerifyId] = useState<string | null>(null);
+  const [verifyAmount, setVerifyAmount] = useState("");
+  const [verifyBusy, setVerifyBusy] = useState(false);
+  const [allocateId, setAllocateId] = useState<string | null>(null);
+  const [allocateBusy, setAllocateBusy] = useState(false);
   const validPeriod = !!from && !!to && from <= to && to <= today;
 
   /** Same period rules as the allocation table: saved rows for this period, plus allocated history that overlaps it. */
@@ -106,12 +111,23 @@ export default function CommunityReportingTab() {
 
   /** Allocated history for the period: the transactions that can be revised or undone. */
   const allocatedRows = useMemo(() => rows.filter(r => r.status === "allocated"), [rows]);
+  const pendingRows = useMemo(() => rows.filter(r => r.status === "pending"), [rows]);
+  const verifiedRows = useMemo(() => rows.filter(r => r.status === "verified"), [rows]);
   const selected = allocatedRows.find(r => r.id === selectedId) ?? null;
   const change = selected && newAmount.trim() !== "" ? reviseCommissionChange(Number(selected.amount), Number(newAmount)) : null;
   const cancelTarget = allocatedRows.find(r => r.id === cancelId) ?? null;
+  const verifyTarget = pendingRows.find(r => r.id === verifyId) ?? null;
+  const allocateTarget = verifiedRows.find(r => r.id === allocateId) ?? null;
 
   const openRevise = (id?: string) => { setSelectedId(id ?? null); setNewAmount(""); setReviseOpen(true); };
   const openCancel = (id?: string) => { setCancelId(id ?? null); setCancelOpen(true); };
+  const openVerify = (id?: string) => {
+    const row = id ? pendingRows.find(r => r.id === id) : null;
+    setVerifyId(row?.id ?? null);
+    setVerifyAmount(row ? String(row.amount) : "");
+    setVerifyOpenFlag(true);
+  };
+  const openAllocate = (id?: string) => { setAllocateId(id ?? null); setAllocateOpenFlag(true); };
 
   const submitRevise = async () => {
     if (!selected || !change) return;
