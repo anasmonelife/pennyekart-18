@@ -10,7 +10,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 
 interface RequestRow { id: string; user_id: string; community_name: string; reason: string | null; status: string; admin_notes: string | null; created_at: string }
-interface Applicant { full_name: string | null; mobile_number: string | null }
+interface Applicant { full_name: string | null; mobile_number: string | null; local_body_id: string | null; ward_number: number | null }
+interface Place { name: string; district: string | null }
+
+/** "Panchayath: Kodur (Malappuram) · Ward 7" or a note that the profile has no area yet. */
+const areaLine = (applicant: Applicant | undefined, places: Record<string, Place>) => {
+  if (!applicant) return "";
+  const body = applicant.local_body_id ? places[applicant.local_body_id] : undefined;
+  const parts = [
+    body ? `${body.name}${body.district ? ` (${body.district})` : ""}` : null,
+    applicant.ward_number ? `Ward ${applicant.ward_number}` : null,
+  ].filter(Boolean) as string[];
+  return parts.length ? `Panchayath: ${parts.join(" · ")}` : "Panchayath/ward not set on profile";
+};
 
 type StatusFilter = "pending" | "approved" | "declined" | "all";
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
