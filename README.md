@@ -91,4 +91,4 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/c
 2-11-26 barcode
         organ
         carbs
-        
+        evasajna
