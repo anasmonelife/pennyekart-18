@@ -47,9 +47,11 @@ export default function CommunityReportingTab() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
   const [verifyId, setVerifyId] = useState<string | null>(null);
   const [verifyAmount, setVerifyAmount] = useState("");
   const [verifyBusy, setVerifyBusy] = useState(false);
+  const [allocateOpen, setAllocateOpen] = useState(false);
   const [allocateId, setAllocateId] = useState<string | null>(null);
   const [allocateBusy, setAllocateBusy] = useState(false);
   const validPeriod = !!from && !!to && from <= to && to <= today;
