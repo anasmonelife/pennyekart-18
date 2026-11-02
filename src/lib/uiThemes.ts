@@ -333,7 +333,7 @@ const HEADER_NAV_VARS: { css: string; pick: (c: ThemeColors) => string }[] = [
 /** All CSS custom properties a theme sets, as [name, value] pairs. */
 export const themeCssVariables = (config: UiThemeConfig): [string, string][] => {
   const vars: [string, string][] = COLOR_VAR_MAP.map(({ css, pick }) => [css, hexToHslTriplet(pick(config.colors))]);
-  vars.push(...HEADER_NAV_VARS.map(({ css, pick }) => [css, pick(config.colors)]));
+  for (const { css, pick } of HEADER_NAV_VARS) vars.push([css, pick(config.colors)]);
   vars.push(["--radius", `${config.buttons.radius / 16}rem`]);
   vars.push(["--theme-card-radius", `${config.productCard.radius}px`]);
   vars.push(["--theme-banner-radius", `${config.banner.radius}px`]);
