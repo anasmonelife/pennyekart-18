@@ -2661,6 +2661,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ui_themes: {
+        Row: {
+          config: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          publish_count: number
+          published_at: string | null
+          status: string
+          template_key: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          publish_count?: number
+          published_at?: string | null
+          status?: string
+          template_key?: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          publish_count?: number
+          published_at?: string | null
+          status?: string
+          template_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -3195,6 +3237,7 @@ export type Database = {
       my_community_id: { Args: never; Returns: string }
       my_normalized_mobile: { Args: never; Returns: string }
       prune_inactive_community_members: { Args: never; Returns: number }
+      publish_ui_theme: { Args: { _theme_id: string }; Returns: boolean }
       remove_community_member: { Args: { _user_id: string }; Returns: boolean }
       request_commission_payout: { Args: { _amount: number }; Returns: string }
       request_community_access: {
@@ -3222,6 +3265,7 @@ export type Database = {
         Args: { _id: string; _new_amount: number }
         Returns: number
       }
+      rollback_ui_theme: { Args: never; Returns: boolean }
       save_commission_allocation_rows: {
         Args: { _from: string; _rows: Json; _to: string }
         Returns: number
