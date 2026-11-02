@@ -60,6 +60,9 @@ export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
   ),
   mobileColumns: 2,
   desktopColumns: 5,
+  mobileRows: 2,
+  tabletRows: 2,
+  desktopRows: 2,
   cardSize: "standard",
   spacing: "comfortable",
   defaultTheme: "light",
@@ -186,6 +189,11 @@ export const useGridClasses = () => {
     6: "md:grid-cols-6",
   };
   const desktopCols = desktopColsMap[settings.desktopColumns] ?? "md:grid-cols-5";
+  const rowClasses = productRowClasses(
+    settings.mobileRows,
+    settings.tabletRows,
+    settings.desktopRows
+  );
   const imgLoading: "lazy" | "eager" = settings.lazyLoadImages ? "lazy" : "eager";
-  return { cardWidth, gap, sectionPadding, mobileCols, desktopCols, imgLoading };
+  return { cardWidth, gap, sectionPadding, mobileCols, desktopCols, rowClasses, imgLoading };
 };
