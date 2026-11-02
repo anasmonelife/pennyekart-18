@@ -10,7 +10,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 
 interface RequestRow { id: string; user_id: string; community_name: string; reason: string | null; status: string; admin_notes: string | null; created_at: string }
-interface Applicant { full_name: string | null; mobile_number: string | null }
+interface Applicant { full_name: string | null; mobile_number: string | null; local_body_id: string | null; ward_number: number | null }
+interface Place { name: string; district: string | null }
+
+/** "Panchayath: Kodur (Malappuram) · Ward 7" or a note that the profile has no area yet. */
+const areaLine = (applicant: Applicant | undefined, places: Record<string, Place>) => {
+  if (!applicant) return "";
+  const body = applicant.local_body_id ? places[applicant.local_body_id] : undefined;
+  const parts = [
+    body ? `${body.name}${body.district ? ` (${body.district})` : ""}` : null,
+    applicant.ward_number ? `Ward ${applicant.ward_number}` : null,
+  ].filter(Boolean) as string[];
+  return parts.length ? `Panchayath: ${parts.join(" · ")}` : "Panchayath/ward not set on profile";
+};
 
 type StatusFilter = "pending" | "approved" | "declined" | "all";
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
@@ -25,6 +37,7 @@ export default function CommunityAccessRequests() {
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
   const [people, setPeople] = useState<Record<string, Applicant>>({});
+  const [places, setPlaces] = useState<Record<string, Place>>({});
   const [choices, setChoices] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -47,8 +60,16 @@ export default function CommunityAccessRequests() {
     setRoles((roleResult.data || []).filter(r => isCommunityRole(r.name)));
     const ids = [...new Set((result.data || []).map(r => r.user_id))];
     if (ids.length) {
-      const { data } = await supabase.from("profiles").select("user_id,full_name,mobile_number").in("user_id", ids);
+      const { data } = await supabase.from("profiles").select("user_id,full_name,mobile_number,local_body_id,ward_number").in("user_id", ids);
       setPeople(Object.fromEntries((data || []).map(p => [p.user_id, p])));
+      const bodyIds = [...new Set((data || []).map(p => p.local_body_id).filter(Boolean))] as string[];
+      if (bodyIds.length) {
+        const { data: bodies } = await supabase.from("locations_local_bodies")
+          .select("id, name, locations_districts(name)").in("id", bodyIds);
+        setPlaces(Object.fromEntries((bodies || []).map(b => [b.id, {
+          name: b.name, district: (b as { locations_districts?: { name: string } | null }).locations_districts?.name ?? null,
+        }])));
+      }
     }
     setLoading(false);
   }, []);
@@ -103,7 +124,7 @@ export default function CommunityAccessRequests() {
         : failed ? <p className="text-sm text-destructive">Could not load requests. Please retry.</p>
         : !visible.length ? <p className="text-sm text-muted-foreground">No {filter === "all" ? "" : filter + " "}access requests.</p> : visible.map(request => (
         <article key={request.id} className="space-y-3 rounded-lg border bg-card p-4">
-          <div className="flex flex-wrap justify-between gap-2"><div className="min-w-0"><h3 className="font-semibold break-words">{request.community_name}</h3><p className="text-sm text-muted-foreground">{people[request.user_id]?.full_name || "Customer"} · {people[request.user_id]?.mobile_number || "—"}</p></div><Badge variant={request.status === "pending" ? "secondary" : "outline"}>{request.status}</Badge></div>
+          <div className="flex flex-wrap justify-between gap-2"><div className="min-w-0"><h3 className="font-semibold break-words">{request.community_name}</h3><p className="text-sm text-muted-foreground">{people[request.user_id]?.full_name || "Customer"} · {people[request.user_id]?.mobile_number || "—"}</p>{people[request.user_id] && <p className="text-xs text-muted-foreground">{areaLine(people[request.user_id], places)}</p>}</div><Badge variant={request.status === "pending" ? "secondary" : "outline"}>{request.status}</Badge></div>
           {request.reason && <p className="text-sm break-words">{request.reason}</p>}
           {request.admin_notes && <p className="text-sm text-muted-foreground">{request.admin_notes}</p>}
           {canReviewCommunityRequest(isSuperAdmin, request.status) && (
