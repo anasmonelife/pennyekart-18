@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { productRowClasses } from "@/lib/displayRows";
 
 export const SETTINGS_KEY = "ui_display_settings";
 
