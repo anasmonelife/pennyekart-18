@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
   LayoutDashboard, Users, ShieldCheck, Package, ShoppingCart,
-  Image, LogOut, ChevronLeft, Settings, Grid3X3, Wrench, Hammer, MapPin, Warehouse, ClipboardList, Truck, Store, Star, SlidersHorizontal, BarChart3, Wallet, Handshake, Menu, X, Percent, Bot, Bell, Gift,
+  Image, LogOut, ChevronLeft, Settings, Grid3X3, Wrench, Hammer, MapPin, Warehouse, ClipboardList, Truck, Store, Star, SlidersHorizontal, BarChart3, Wallet, Handshake, Menu, X, Percent, Bot, Bell, Gift, Palette,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -49,6 +49,7 @@ const navItems = [
   { label: "Internal Notifications", icon: Bell, path: "/admin/notifications", perm: "read_settings" },
   { label: "Push Notifications", icon: Bell, path: "/admin/push-notifications", perm: "read_settings" },
   { label: "Scratch & Win", icon: Gift, path: "/admin/scratch-rewards", perm: "read_settings" },
+  { label: "Theme Studio", icon: Palette, path: "/admin/themes", perm: "read_settings" },
 ];
 
 const NavItems = ({ items, currentPath, onNavigate }: { items: typeof navItems; currentPath: string; onNavigate?: () => void }) => (

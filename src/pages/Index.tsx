@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { Fragment, ReactNode, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import PlatformSelector from "@/components/PlatformSelector";
 import SearchBar from "@/components/SearchBar";
@@ -20,6 +20,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAreaProducts } from "@/hooks/useAreaProducts";
 import { useSectionProducts } from "@/hooks/useSectionProducts";
 import { useDisplaySettings } from "@/hooks/useDisplaySettings";
+import { useUiTheme } from "@/hooks/useUiTheme";
+import { ThemeSectionKey } from "@/lib/uiThemes";
 import { supabase } from "@/integrations/supabase/client";
 
 const sectionOrder = ["featured", "sponsors", "most_ordered", "new_arrivals", "low_budget"];
@@ -34,6 +36,7 @@ const Index = () => {
   const location = useLocation();
   const { user, profile } = useAuth();
   const { isSectionVisible } = useDisplaySettings();
+  const { config: themeConfig } = useUiTheme();
 
   // Check for signup reward popup
   useEffect(() => {
@@ -259,6 +262,19 @@ const Index = () => {
     ));
   };
 
+  // Homepage section order comes from the published theme (Theme Studio drag-and-drop ordering).
+  const sectionRenderers: Record<ThemeSectionKey, ReactNode> = {
+    cart_reminder: <CartReminderBanner />,
+    carbs_strip: <CarbsBannerStrip />,
+    flash_sale: <FlashSaleBanner />,
+    category_bar: <CategoryBar onCategoryClick={handleCategoryClick} selectedCategory={selectedCategory} />,
+    sort_bar: <SortFilterBar selected={sortBy} onChange={setSortBy} />,
+    banner_carousel: <BannerCarousel />,
+    scratch_widget: <ScratchCardWidget />,
+    grocery_categories: <GroceryCategories onCategoryClick={handleCategoryClick} selectedCategory={selectedCategory} />,
+    combo_offers: <ComboOffersSection />,
+  };
+
   return (
     <div className="min-h-screen pb-16 md:pb-0">
       <header className="sticky top-0 z-50">
@@ -267,19 +283,9 @@ const Index = () => {
       </header>
 
       <main className="relative z-0 space-y-2">
-        {isSectionVisible("cart_reminder") && <CartReminderBanner />}
-        {isSectionVisible("carbs_strip") && <CarbsBannerStrip />}
-        {isSectionVisible("flash_sale") && <FlashSaleBanner />}
-        {isSectionVisible("category_bar") && (
-          <CategoryBar onCategoryClick={handleCategoryClick} selectedCategory={selectedCategory} />
-        )}
-        {isSectionVisible("sort_bar") && <SortFilterBar selected={sortBy} onChange={setSortBy} />}
-        {isSectionVisible("banner_carousel") && <BannerCarousel />}
-        {isSectionVisible("scratch_widget") && <ScratchCardWidget />}
-        {isSectionVisible("grocery_categories") && (
-          <GroceryCategories onCategoryClick={handleCategoryClick} selectedCategory={selectedCategory} />
-        )}
-        {isSectionVisible("combo_offers") && <ComboOffersSection />}
+        {themeConfig.homepage.sections.map((key) => (
+          <Fragment key={key}>{isSectionVisible(key) && sectionRenderers[key]}</Fragment>
+        ))}
         {renderSectionProducts()}
       </main>
 

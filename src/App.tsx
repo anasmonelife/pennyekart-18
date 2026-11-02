@@ -9,6 +9,9 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { LiteModeProvider, useLiteMode } from "@/hooks/useLiteMode";
 import { DisplaySettingsProvider } from "@/hooks/useDisplaySettings";
+import { UiThemeProvider } from "@/hooks/useUiTheme";
+import ThemeStudioPage from "./pages/admin/ThemeStudioPage";
+import ThemeEditorPage from "./pages/admin/ThemeEditorPage";
 import Index from "./pages/Index";
 import LiteIndex from "./pages/LiteIndex";
 import NotFound from "./pages/NotFound";
@@ -122,6 +125,8 @@ const AppRoutes = () => {
       <Route path="/admin/notifications" element={<ProtectedRoute requirePermission="read_settings"><NotificationsPage /></ProtectedRoute>} />
       <Route path="/admin/push-notifications" element={<ProtectedRoute requirePermission="read_settings"><PushNotificationsPage /></ProtectedRoute>} />
       <Route path="/admin/scratch-rewards" element={<ProtectedRoute requirePermission="read_settings"><ScratchRewardsPage /></ProtectedRoute>} />
+      <Route path="/admin/themes" element={<ProtectedRoute requirePermission="read_settings"><ThemeStudioPage /></ProtectedRoute>} />
+      <Route path="/admin/themes/:id" element={<ProtectedRoute requirePermission="read_settings"><ThemeEditorPage /></ProtectedRoute>} />
       <Route path="/admin/communities" element={<ProtectedRoute requirePermission="read_users"><CommunitiesPage /></ProtectedRoute>} />
       <Route path="/penny-prime" element={<PennyPrimePublic />} />
 
@@ -182,6 +187,7 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
+    <UiThemeProvider>
       <TooltipProvider>
         <DisplaySettingsProvider>
         <LiteModeProvider>
@@ -203,6 +209,7 @@ const App = () => {
         </LiteModeProvider>
         </DisplaySettingsProvider>
       </TooltipProvider>
+    </UiThemeProvider>
     </QueryClientProvider>
   );
 };

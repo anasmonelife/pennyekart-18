@@ -164,6 +164,15 @@ const mergeSectionOrder = (raw: unknown): ThemeSectionKey[] => {
   return [...cleaned, ...missing];
 };
 
+/** Move one section to a new index (used by the Theme Studio drag-and-drop list). */
+export const reorderSections = (sections: ThemeSectionKey[], from: number, to: number): ThemeSectionKey[] => {
+  if (from === to || from < 0 || to < 0 || from >= sections.length || to >= sections.length) return sections;
+  const copy = [...sections];
+  const [moved] = copy.splice(from, 1);
+  copy.splice(to, 0, moved);
+  return copy;
+};
+
 // ---------- Ready-made templates ----------
 
 const template = (

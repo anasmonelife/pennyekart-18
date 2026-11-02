@@ -5,6 +5,7 @@ import {
   THEME_TEMPLATES,
   hexToHslTriplet,
   mergeThemeConfig,
+  reorderSections,
   themeCssVariables,
 } from "./uiThemes";
 
@@ -62,5 +63,21 @@ describe("uiThemes", () => {
     }
     const keys = THEME_TEMPLATES.map((t) => t.key);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("moves a dragged section to its drop position and keeps every section once", () => {
+    const base = DEFAULT_UI_THEME_CONFIG.homepage.sections;
+    const moved = reorderSections(base, 0, 3);
+    expect(moved[3]).toBe("cart_reminder");
+    expect(moved.filter((k) => k === "cart_reminder")).toHaveLength(1);
+    expect(moved).toHaveLength(base.length);
+    expect(new Set(moved).size).toBe(THEME_SECTION_LABELS.length);
+  });
+
+  it("ignores no-op or out-of-range drags instead of corrupting the order", () => {
+    const base = DEFAULT_UI_THEME_CONFIG.homepage.sections;
+    expect(reorderSections(base, 2, 2)).toBe(base);
+    expect(reorderSections(base, -1, 2)).toBe(base);
+    expect(reorderSections(base, 0, base.length)).toBe(base);
   });
 });
