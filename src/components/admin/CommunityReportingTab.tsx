@@ -47,9 +47,11 @@ export default function CommunityReportingTab() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
   const [verifyId, setVerifyId] = useState<string | null>(null);
   const [verifyAmount, setVerifyAmount] = useState("");
   const [verifyBusy, setVerifyBusy] = useState(false);
+  const [allocateOpen, setAllocateOpen] = useState(false);
   const [allocateId, setAllocateId] = useState<string | null>(null);
   const [allocateBusy, setAllocateBusy] = useState(false);
   const validPeriod = !!from && !!to && from <= to && to <= today;
@@ -125,9 +127,9 @@ export default function CommunityReportingTab() {
     const row = id ? pendingRows.find(r => r.id === id) : null;
     setVerifyId(row?.id ?? null);
     setVerifyAmount(row ? String(row.amount) : "");
-    setVerifyOpenFlag(true);
+    setVerifyOpen(true);
   };
-  const openAllocate = (id?: string) => { setAllocateId(id ?? null); setAllocateOpenFlag(true); };
+  const openAllocate = (id?: string) => { setAllocateId(id ?? null); setAllocateOpen(true); };
 
   const submitRevise = async () => {
     if (!selected || !change) return;
