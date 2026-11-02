@@ -40,6 +40,12 @@
 - [x] Securely credit each allocated amount to the creator's wallet once and show period details in the wallet Sales Commission tab. Super-admin RPCs verify and allocate under lock; wallet tab lists community, role, period and paid date; focused wallet tests pass.
 - [ ] Finish the customer Sales Commission totals, 20% hold, payout request action, and request statuses; add the admin verify/approve/reject tab and run focused tests.
 - [ ] Verify the allocation and wallet flow in a signed-in super admin + customer session (blocked: external Supabase gives no test sign-in).
+- [ ] Add a cancel/undo action for allocated (or revised) commission — debit the wallet back, record the undo, allow corrected re-allocation.
+- [ ] Add verify, allocate, revise and cancel/undo actions to the Reporting allocated table on /admin/communities.
+- [ ] Add date-period details to the customer wallet Sales Commission tab; confirm the commission table permissions.
+
+## Admin access request area details
+- [ ] Show each community access request's panchayath and ward on /admin/communities → Access requests so admins can identify the requester.
 
 ## Communities commission allocation tab
 - [x] Show communities in each e-Life person's allocated area, calculate commission using saved role rates, persist period snapshots, and provide refresh, search, filters, and CSV export. Added checks for saved-snapshot loading and fresh calculation/save; focused tests pass.
