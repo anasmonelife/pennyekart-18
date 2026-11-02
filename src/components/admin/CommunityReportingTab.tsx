@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Loader2, PencilLine } from "lucide-react";
+import { Download, Loader2, PencilLine, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 
 const db = supabase as unknown as { from: (t: string) => any; rpc: (fn: string, a?: Record<string, unknown>) => any };
@@ -44,6 +44,9 @@ export default function CommunityReportingTab() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newAmount, setNewAmount] = useState("");
   const [busy, setBusy] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const [cancelBusy, setCancelBusy] = useState(false);
   const validPeriod = !!from && !!to && from <= to && to <= today;
 
   /** Same period rules as the allocation table: saved rows for this period, plus allocated history that overlaps it. */
@@ -101,12 +104,14 @@ export default function CommunityReportingTab() {
     return [...map.entries()].sort((a, b) => b[1].amount - a[1].amount);
   }, [filtered]);
 
-  /** Allocated history for the period: the transactions that can be revised. */
+  /** Allocated history for the period: the transactions that can be revised or undone. */
   const allocatedRows = useMemo(() => rows.filter(r => r.status === "allocated"), [rows]);
   const selected = allocatedRows.find(r => r.id === selectedId) ?? null;
   const change = selected && newAmount.trim() !== "" ? reviseCommissionChange(Number(selected.amount), Number(newAmount)) : null;
+  const cancelTarget = allocatedRows.find(r => r.id === cancelId) ?? null;
 
   const openRevise = (id?: string) => { setSelectedId(id ?? null); setNewAmount(""); setReviseOpen(true); };
+  const openCancel = (id?: string) => { setCancelId(id ?? null); setCancelOpen(true); };
 
   const submitRevise = async () => {
     if (!selected || !change) return;
@@ -119,6 +124,17 @@ export default function CommunityReportingTab() {
     await load();
   };
 
+  /** Undo an allocated commission: wallet debit recorded server-side, the row returns to Verified for a corrected re-allocation. */
+  const submitCancel = async () => {
+    if (!cancelTarget) return;
+    setCancelBusy(true);
+    const { error } = await db.rpc("cancel_commission_allocation", { _id: cancelTarget.id });
+    setCancelBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success(`Transaction cancelled — ${money(cancelTarget.amount)} debited from the wallet. Allocate a corrected amount when ready.`);
+    setCancelOpen(false); setCancelId(null);
+    await load();
+  };
 
   const exportCsv = async () => {
     setExporting(true);
@@ -138,6 +154,40 @@ export default function CommunityReportingTab() {
     }
     setExporting(false);
   };
+
+  const transactionPicker = (
+    name: string,
+    checkedId: string | null,
+    onSelect: (id: string) => void,
+  ) => (
+    <div className="space-y-1">
+      <p className="text-xs font-medium text-muted-foreground">Allocated transactions · {from} – {to}</p>
+      <div className="max-h-56 divide-y overflow-y-auto rounded-md border">
+        {allocatedRows.map(r => (
+          <label key={r.id} className="flex cursor-pointer items-center justify-between gap-3 p-2 text-sm hover:bg-muted/50">
+            <div className="flex min-w-0 items-center gap-2">
+              <input type="radio" name={name} className="accent-primary" checked={checkedId === r.id}
+                onChange={() => onSelect(r.id)}
+                aria-label={`Select ${r.community_name} · ${r.recipient_name || "recipient"}`} />
+              <div className="min-w-0">
+                <p className="truncate font-medium">{r.community_name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {TYPE_LABEL[r.recipient_type] ?? r.recipient_type} · {r.recipient_name || "—"} · {r.period_from} – {r.period_to}
+                </p>
+              </div>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="font-semibold">{money(r.amount)}</p>
+              {isRevised(r) && <p className="text-xs text-muted-foreground">was {money(Number(r.original_amount) || 0)}</p>}
+            </div>
+          </label>
+        ))}
+        {allocatedRows.length === 0 && (
+          <p className="p-3 text-xs text-muted-foreground">No allocated transactions for this period yet.</p>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <section className="space-y-4">
@@ -170,6 +220,11 @@ export default function CommunityReportingTab() {
         <div className="space-y-1"><Label htmlFor="report-revise" className="opacity-0">Revise</Label>
           <Button id="report-revise" size="sm" variant="outline" onClick={() => openRevise()} disabled={!validPeriod || allocatedRows.length === 0}>
             <PencilLine className="mr-2 h-4 w-4" />Revise transaction
+          </Button>
+        </div>
+        <div className="space-y-1"><Label htmlFor="report-cancel" className="opacity-0">Cancel</Label>
+          <Button id="report-cancel" size="sm" variant="outline" onClick={() => openCancel()} disabled={!validPeriod || allocatedRows.length === 0}>
+            <Undo2 className="mr-2 h-4 w-4" />Cancel &amp; undo
           </Button>
         </div>
         <div className="space-y-1"><Label htmlFor="report-export" className="opacity-0">Export</Label>
@@ -259,9 +314,14 @@ export default function CommunityReportingTab() {
                       <p className="text-xs text-muted-foreground mt-1">{new Date(r.allocated_at).toLocaleString("en-IN")}</p>
                     )}
                     {r.status === "allocated" && (
-                      <Button size="sm" variant="ghost" className="mt-1 h-6 px-2 text-xs" onClick={() => openRevise(r.id)}>
-                        <PencilLine className="mr-1 h-3 w-3" />Revise
-                      </Button>
+                      <div className="mt-1 flex gap-1">
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => openRevise(r.id)}>
+                          <PencilLine className="mr-1 h-3 w-3" />Revise
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => openCancel(r.id)}>
+                          <Undo2 className="mr-1 h-3 w-3" />Undo
+                        </Button>
+                      </div>
                     )}
                   </TableCell>
                 </TableRow>
@@ -284,33 +344,7 @@ export default function CommunityReportingTab() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">Allocated transactions · {from} – {to}</p>
-              <div className="max-h-56 divide-y overflow-y-auto rounded-md border">
-                {allocatedRows.map(r => (
-                  <label key={r.id} className="flex cursor-pointer items-center justify-between gap-3 p-2 text-sm hover:bg-muted/50">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <input type="radio" name="revise-tx" className="accent-primary" checked={selectedId === r.id}
-                        onChange={() => { setSelectedId(r.id); setNewAmount(""); }}
-                        aria-label={`Select ${r.community_name} · ${r.recipient_name || "recipient"}`} />
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{r.community_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {TYPE_LABEL[r.recipient_type] ?? r.recipient_type} · {r.recipient_name || "—"} · {r.period_from} – {r.period_to}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="font-semibold">{money(r.amount)}</p>
-                      {isRevised(r) && <p className="text-xs text-muted-foreground">was {money(Number(r.original_amount) || 0)}</p>}
-                    </div>
-                  </label>
-                ))}
-                {allocatedRows.length === 0 && (
-                  <p className="p-3 text-xs text-muted-foreground">No allocated transactions for this period yet.</p>
-                )}
-              </div>
-            </div>
+            {transactionPicker("revise-tx", selectedId, id => { setSelectedId(id); setNewAmount(""); })}
             {selected && (
               <div className="space-y-2 rounded-md border bg-muted/30 p-3">
                 <div className="grid grid-cols-2 gap-2 text-xs">
@@ -336,6 +370,35 @@ export default function CommunityReportingTab() {
               </div>
             )}
             {!selected && <p className="text-xs text-muted-foreground">Select a transaction above to revise it. Revised ones stay in the list and under the Revised card.</p>}
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={cancelOpen} onOpenChange={o => { if (!o && !cancelBusy) setCancelOpen(false); }}>
+        <DialogContent className="max-h-[85vh] max-w-xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Cancel &amp; undo transaction</DialogTitle>
+            <DialogDescription>
+              Undo an allocated commission: the amount is debited back from the wallet, the undo is recorded, and the row returns to Verified so a corrected amount can be re-allocated.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {transactionPicker("cancel-tx", cancelId, id => setCancelId(id))}
+            {cancelTarget && (
+              <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div><p className="text-muted-foreground">Wallet debit</p><p className="font-semibold text-destructive">−{money(cancelTarget.amount)}</p></div>
+                  <div><p className="text-muted-foreground">Recipient</p><p className="font-semibold">{cancelTarget.recipient_name || "—"} · {TYPE_LABEL[cancelTarget.recipient_type] ?? cancelTarget.recipient_type}</p></div>
+                </div>
+                <p className="text-xs text-muted-foreground">If the wallet balance has already been spent, the cancellation is refused with the current balance shown.</p>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" disabled={cancelBusy} onClick={() => setCancelOpen(false)}>Keep allocation</Button>
+                  <Button size="sm" variant="destructive" disabled={cancelBusy || !cancelTarget} onClick={() => void submitCancel()}>
+                    {cancelBusy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Undo2 className="mr-1 h-4 w-4" />}Cancel transaction
+                  </Button>
+                </div>
+              </div>
+            )}
+            {!cancelTarget && <p className="text-xs text-muted-foreground">Select a transaction above to undo it.</p>}
           </div>
         </DialogContent>
       </Dialog>
