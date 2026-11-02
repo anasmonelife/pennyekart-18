@@ -32,7 +32,7 @@ const ProductRow = ({ title, products, linkPrefix = "/product/", sectionKey }: P
   const navigate = useNavigate();
   const meta = sectionKey ? sectionMeta[sectionKey] : null;
   const Icon = meta?.icon;
-  const { cardWidth, gap, sectionPadding, imgLoading } = useGridClasses();
+  const { cardWidth, gap, sectionPadding, rowClasses, imgLoading } = useGridClasses();
 
   // Sort: available first, coming_soon last
   const sortedProducts = [...products].sort((a, b) => {
@@ -61,7 +61,7 @@ const ProductRow = ({ title, products, linkPrefix = "/product/", sectionKey }: P
           </button>
         </div>
 
-        <div className={`flex ${gap} overflow-x-auto scrollbar-hide pb-2`}>
+        <div className={`grid grid-flow-col ${rowClasses} ${gap} overflow-x-auto scrollbar-hide pb-2`}>
           {sortedProducts.map((p, i) => (
             <div
               key={p.id || i}

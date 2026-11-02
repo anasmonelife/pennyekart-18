@@ -144,7 +144,10 @@ const DisplaySettingsPanel = () => {
             <LayoutGrid className="h-6 w-6 text-primary" />
             <div>
               <CardTitle>Layout Density & Grid</CardTitle>
-              <CardDescription>Control how many products show per row and how tightly they are packed.</CardDescription>
+              <CardDescription>
+                Control how many products show per row, how many rows appear on mobile, tablet and
+                computer screens, and how tightly they are packed.
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -173,6 +176,48 @@ const DisplaySettingsPanel = () => {
                 <SelectContent>
                   {[3, 4, 5, 6].map((n) => (
                     <SelectItem key={n} value={String(n)}>{n} per row</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Product rows — mobile</Label>
+              <Select
+                value={String(settings.mobileRows)}
+                onValueChange={(v) => update("mobileRows", Number(v))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n} row{n > 1 ? "s" : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Product rows — tablet</Label>
+              <Select
+                value={String(settings.tabletRows)}
+                onValueChange={(v) => update("tabletRows", Number(v))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n} row{n > 1 ? "s" : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Product rows — computer</Label>
+              <Select
+                value={String(settings.desktopRows)}
+                onValueChange={(v) => update("desktopRows", Number(v))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n} row{n > 1 ? "s" : ""}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { productRowClasses } from "@/lib/displayRows";
 
 export const SETTINGS_KEY = "ui_display_settings";
 
@@ -38,6 +39,9 @@ export interface DisplaySettings {
   sections: Record<SectionKey, boolean>;
   mobileColumns: number;
   desktopColumns: number;
+  mobileRows: number;
+  tabletRows: number;
+  desktopRows: number;
   cardSize: "compact" | "standard" | "large";
   spacing: "compact" | "comfortable";
   defaultTheme: "light" | "dark" | "system";
@@ -57,6 +61,9 @@ export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
   ),
   mobileColumns: 2,
   desktopColumns: 5,
+  mobileRows: 2,
+  tabletRows: 2,
+  desktopRows: 2,
   cardSize: "standard",
   spacing: "comfortable",
   defaultTheme: "light",
@@ -183,6 +190,11 @@ export const useGridClasses = () => {
     6: "md:grid-cols-6",
   };
   const desktopCols = desktopColsMap[settings.desktopColumns] ?? "md:grid-cols-5";
+  const rowClasses = productRowClasses(
+    settings.mobileRows,
+    settings.tabletRows,
+    settings.desktopRows
+  );
   const imgLoading: "lazy" | "eager" = settings.lazyLoadImages ? "lazy" : "eager";
-  return { cardWidth, gap, sectionPadding, mobileCols, desktopCols, imgLoading };
+  return { cardWidth, gap, sectionPadding, mobileCols, desktopCols, rowClasses, imgLoading };
 };
