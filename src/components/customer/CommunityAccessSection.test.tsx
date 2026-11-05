@@ -16,17 +16,19 @@ describe("community access profile flow", () => {
     expect(mocks.rpc).toHaveBeenCalledWith("can_use_community");
     expect(screen.queryByRole("button", { name: "Request access" })).not.toBeInTheDocument();
   });
-  it("submits an access request without exposing community controls", async () => {
+  it("sends the request with one button and no community name or reason fields", async () => {
     mocks.rpc.mockImplementation(async (fn: string) => ({ data: fn === "can_use_community" ? false : "request-1", error: null }));
     render(<CommunityAccessSection userId="customer-1" />);
-    fireEvent.change(await screen.findByLabelText("Community name"), { target: { value: "Local group" } });
+    await screen.findByRole("button", { name: "Request access" });
+    expect(screen.queryByLabelText(/community name/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/reason/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Request access" }));
-    await waitFor(() => expect(mocks.rpc).toHaveBeenCalledWith("request_community_access", { _community_name: "Local group", _reason: undefined }));
+    await waitFor(() => expect(mocks.rpc).toHaveBeenCalledWith("request_community_access"));
     expect(screen.queryByTestId("community")).not.toBeInTheDocument();
   });
   it("does not offer another submission while a request is pending", async () => {
     mocks.rpc.mockResolvedValue({ data: false, error: null });
-    mocks.read.mockResolvedValue({ data: { status: "pending", community_name: "Local group", admin_notes: null }, error: null });
+    mocks.read.mockResolvedValue({ data: { status: "pending", admin_notes: null }, error: null });
     render(<CommunityAccessSection userId="customer-1" />);
     await waitFor(() => expect(mocks.read).toHaveBeenCalled());
     await screen.findByText(/awaiting administrator review/);
