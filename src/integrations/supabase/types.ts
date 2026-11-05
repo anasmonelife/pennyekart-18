@@ -437,7 +437,7 @@ export type Database = {
       community_access_requests: {
         Row: {
           admin_notes: string | null
-          community_name: string
+          community_name: string | null
           created_at: string
           id: string
           reason: string | null
@@ -449,7 +449,7 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
-          community_name: string
+          community_name?: string | null
           created_at?: string
           id?: string
           reason?: string | null
@@ -461,7 +461,7 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
-          community_name?: string
+          community_name?: string | null
           created_at?: string
           id?: string
           reason?: string | null
@@ -3240,10 +3240,7 @@ export type Database = {
       publish_ui_theme: { Args: { _theme_id: string }; Returns: boolean }
       remove_community_member: { Args: { _user_id: string }; Returns: boolean }
       request_commission_payout: { Args: { _amount: number }; Returns: string }
-      request_community_access: {
-        Args: { _community_name: string; _reason?: string }
-        Returns: string
-      }
+      request_community_access: { Args: never; Returns: string }
       respond_to_community_invite: {
         Args: { _accept: boolean; _invite_id: string }
         Returns: boolean
