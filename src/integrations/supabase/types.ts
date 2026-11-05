@@ -3112,6 +3112,24 @@ export type Database = {
         | { Args: { _description?: string; _name: string }; Returns: string }
       delete_account_data: { Args: { _uid: string }; Returns: Json }
       delete_my_community: { Args: never; Returns: boolean }
+      get_community_analytics: {
+        Args: { _from?: string; _to?: string }
+        Returns: {
+          community_id: string
+          community_name: string
+          cost: number
+          created_at: string
+          creator_mobile: string
+          creator_name: string
+          creator_user_id: string
+          member_count: number
+          members_joined_period: number
+          order_count: number
+          profit: number
+          revenue: number
+          unmatched_items: number
+        }[]
+      }
       get_community_member_revenue: {
         Args: { _community_id: string; _from?: string; _to?: string }
         Returns: {

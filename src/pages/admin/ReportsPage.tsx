@@ -651,36 +651,42 @@ const ReportsPage = () => {
 
   // ─── Community Analytics ───────────────────────────────────────────────────
   useEffect(() => {
-    const from = dateFrom ? format(startOfDay(dateFrom), "yyyy-MM-dd") : format(subDays(new Date(), 30), "yyyy-MM-dd");
-    const to = dateTo ? format(endOfDay(dateTo), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
-    supabase.rpc("get_community_revenue_summary", { _from: from, _to: to }).then(({ data, error }) => {
-      if (error) console.error("community summary:", error.message);
+    const from = (dateFrom ? startOfDay(dateFrom) : startOfDay(subDays(new Date(), 30))).toISOString();
+    const to = (dateTo ? endOfDay(dateTo) : endOfDay(new Date())).toISOString();
+    // Server-side analytics: admins can't read other users' communities directly (RLS), so use the permission-checked RPC.
+    (supabase.rpc as any)("get_community_analytics", { _from: from, _to: to }).then(({ data, error }: any) => {
+      if (error) console.error("community analytics:", error.message);
       setCommunitySummary((data ?? []) as CommunitySummaryRow[]);
     });
   }, [dateFrom, dateTo]);
 
   const communityAnalytics = useMemo(() => {
-    const membersByCommunity: Record<string, number> = {};
-    communityMembers.forEach(m => { membersByCommunity[m.community_id] = (membersByCommunity[m.community_id] || 0) + 1; });
-    const rows = communities.map(c => {
-      const s = communitySummary.find(x => x.community_id === c.id);
-      return {
-        id: c.id,
-        name: c.name,
-        creator: s?.creator_name || (c.creator_user_id ? profileMap[c.creator_user_id]?.full_name || "—" : "—"),
-        members: membersByCommunity[c.id] || 0,
-        orders: Number(s?.order_count || 0),
-        revenue: Number(s?.revenue || 0),
-        profit: Number(s?.profit || 0),
-      };
-    });
+    const rows = communitySummary.map((s: any) => ({
+      id: s.community_id as string,
+      name: s.community_name as string,
+      creator: s.creator_name || (s.creator_user_id ? profileMap[s.creator_user_id]?.full_name || "—" : "—"),
+      mobile: (s.creator_mobile as string) || "—",
+      created: s.created_at ? format(new Date(s.created_at), "dd MMM yyyy") : "—",
+      members: Number(s.member_count || 0),
+      newMembers: Number(s.members_joined_period || 0),
+      orders: Number(s.order_count || 0),
+      revenue: Number(s.revenue || 0),
+      cost: Number(s.cost || 0),
+      profit: Number(s.profit || 0),
+    }));
+    const revenue = rows.reduce((sum, r) => sum + r.revenue, 0);
+    const orders = rows.reduce((sum, r) => sum + r.orders, 0);
     return {
       rows,
+      totalMembers: rows.reduce((sum, r) => sum + r.members, 0),
+      newMembers: rows.reduce((sum, r) => sum + r.newMembers, 0),
       activeCommunities: rows.filter(r => r.orders > 0).length,
-      revenue: rows.reduce((sum, r) => sum + r.revenue, 0),
+      orders,
+      revenue,
       profit: rows.reduce((sum, r) => sum + r.profit, 0),
+      avgOrder: orders > 0 ? revenue / orders : 0,
     };
-  }, [communities, communityMembers, communitySummary, profileMap]);
+  }, [communitySummary, profileMap]);
 
   // ─── Click-to-open detail popups ───────────────────────────────────────────
   const cardClick = (title: string, build: () => ReactNode) => {
@@ -1001,10 +1007,10 @@ const ReportsPage = () => {
 
   const communityTable = () => (
     <>
-      <Summary>{communityAnalytics.rows.length} communities · {communityMembers.length} members all-time</Summary>
+      <Summary>{communityAnalytics.rows.length} communities · {communityAnalytics.totalMembers} members · {communityAnalytics.newMembers} joined this period</Summary>
       <DetailTable
-        cols={[{ label: "Community" }, { label: "Creator" }, { label: "Members", right: true }, { label: "Orders", right: true }, { label: "Revenue", right: true }, { label: "Profit", right: true }]}
-        rows={communityAnalytics.rows.slice().sort((a, b) => b.revenue - a.revenue).map(r => [r.name, r.creator, r.members, r.orders, r.revenue > 0 ? fmt(r.revenue) : "—", r.profit > 0 ? fmt(r.profit) : "—"])}
+        cols={[{ label: "Community" }, { label: "Creator" }, { label: "Mobile" }, { label: "Created" }, { label: "Members", right: true }, { label: "New", right: true }, { label: "Orders", right: true }, { label: "Revenue", right: true }, { label: "Cost", right: true }, { label: "Profit", right: true }]}
+        rows={communityAnalytics.rows.slice().sort((a, b) => b.revenue - a.revenue).map(r => [r.name, r.creator, r.mobile, r.created, r.members, r.newMembers, r.orders, r.revenue > 0 ? fmt(r.revenue) : "—", r.cost > 0 ? fmt(r.cost) : "—", r.profit !== 0 ? fmt(r.profit) : "—"])}
         empty="No communities yet"
       />
     </>
@@ -1961,10 +1967,16 @@ const ReportsPage = () => {
 
         <TabsContent value="community" className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Total Communities" value={String(communities.length)} icon={Network} {...cardClick("Communities", () => communityTable())} />
-            <StatCard label="Community Members" value={String(communityMembers.length)} icon={Users} sub={`across ${communities.length} communities`} {...cardClick("Community Members", () => communityTable())} />
+            <StatCard label="Total Communities" value={String(communityAnalytics.rows.length)} icon={Network} {...cardClick("Communities", () => communityTable())} />
+            <StatCard label="Community Members" value={String(communityAnalytics.totalMembers)} icon={Users} sub={`${communityAnalytics.newMembers} joined this period`} {...cardClick("Community Members", () => communityTable())} />
             <StatCard label="Active Communities" value={String(communityAnalytics.activeCommunities)} icon={Activity} sub="with orders in this period" {...cardClick("Active Communities", () => communityTable())} />
             <StatCard label="Community Revenue" value={fmt(communityAnalytics.revenue)} icon={TrendingUp} sub={`profit ${fmt(communityAnalytics.profit)}`} color="text-green-600" {...cardClick("Community Performance", () => communityTable())} />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Community Orders" value={String(communityAnalytics.orders)} icon={Activity} sub="delivered in this period" {...cardClick("Community Performance", () => communityTable())} />
+            <StatCard label="Avg Order Value" value={fmt(communityAnalytics.avgOrder)} icon={TrendingUp} {...cardClick("Community Performance", () => communityTable())} />
+            <StatCard label="Inactive Communities" value={String(communityAnalytics.rows.length - communityAnalytics.activeCommunities)} icon={Network} sub="no orders this period" {...cardClick("Community Performance", () => communityTable())} />
+            <StatCard label="Avg Members" value={communityAnalytics.rows.length ? (communityAnalytics.totalMembers / communityAnalytics.rows.length).toFixed(1) : "0"} icon={Users} sub="per community" {...cardClick("Community Members", () => communityTable())} />
           </div>
           <Card {...cardClick("Community Performance", () => communityTable())}>
             <CardHeader><CardTitle className="text-base">Community Performance (period revenue)</CardTitle></CardHeader>
@@ -1979,6 +1991,7 @@ const ReportsPage = () => {
                         <TableHead>Community</TableHead>
                         <TableHead>Creator</TableHead>
                         <TableHead className="text-right">Members</TableHead>
+                        <TableHead className="text-right">New</TableHead>
                         <TableHead className="text-right">Orders</TableHead>
                         <TableHead className="text-right">Revenue</TableHead>
                         <TableHead className="text-right">Profit</TableHead>
@@ -1990,9 +2003,10 @@ const ReportsPage = () => {
                           <TableCell className="font-medium">{r.name}</TableCell>
                           <TableCell className="text-xs">{r.creator}</TableCell>
                           <TableCell className="text-right">{r.members}</TableCell>
+                          <TableCell className="text-right">{r.newMembers}</TableCell>
                           <TableCell className="text-right">{r.orders}</TableCell>
                           <TableCell className="text-right font-semibold">{r.revenue > 0 ? fmt(r.revenue) : "—"}</TableCell>
-                          <TableCell className="text-right">{r.profit > 0 ? fmt(r.profit) : "—"}</TableCell>
+                          <TableCell className="text-right">{r.profit !== 0 ? fmt(r.profit) : "—"}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
