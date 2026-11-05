@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { format, subDays, formatDistanceToNow, differenceInDays, differenceInHours } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import WhatsAppChatButton from "@/components/admin/WhatsAppChatButton";
 
 interface Profile {
   id: string;
@@ -638,6 +639,7 @@ const CustomerList = ({ customers, orderSummaries, walletSummaries, onRefresh }:
                   <div className="text-xs text-muted-foreground">{c.mobile_number ?? "—"}</div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  <WhatsAppChatButton name={c.full_name} mobile={c.mobile_number} />
                   {getStatusBadge(c)}
                   <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90" />
                 </div>
@@ -718,7 +720,7 @@ const CustomerList = ({ customers, orderSummaries, walletSummaries, onRefresh }:
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>{c.mobile_number ?? "—"}</TableCell>
+                  <TableCell><div className="flex items-center gap-1">{c.mobile_number ?? "—"}<WhatsAppChatButton name={c.full_name} mobile={c.mobile_number} /></div></TableCell>
                   <TableCell>{getStatusBadge(c)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">

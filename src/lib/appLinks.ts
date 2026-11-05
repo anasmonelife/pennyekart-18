@@ -121,3 +121,15 @@ export const shouldOpenDeepLink = (url: string, now: number = Date.now()): boole
 export const resetDeepLinkDedupe = () => {
   lastDeepLink = null;
 };
+
+/** Normalize a mobile to WhatsApp digits (10-digit Indian numbers get the 91 country code). */
+export const whatsappDigits = (mobile: string | null | undefined): string | null => {
+  let d = (mobile ?? "").replace(/\D/g, "");
+  if (d.startsWith("0") && d.length === 11) d = d.slice(1);
+  if (d.length === 10) d = "91" + d;
+  return d.length >= 11 && d.length <= 15 ? d : null;
+};
+
+/** Click-to-chat link that opens WhatsApp with a prefilled message. */
+export const whatsappChatLink = (digits: string, message: string): string =>
+  `https://wa.me/${digits}${message ? `?text=${encodeURIComponent(message)}` : ""}`;
