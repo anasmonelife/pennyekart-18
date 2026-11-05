@@ -1991,6 +1991,7 @@ const ReportsPage = () => {
                         <TableHead>Community</TableHead>
                         <TableHead>Creator</TableHead>
                         <TableHead className="text-right">Members</TableHead>
+                        <TableHead className="text-right">New</TableHead>
                         <TableHead className="text-right">Orders</TableHead>
                         <TableHead className="text-right">Revenue</TableHead>
                         <TableHead className="text-right">Profit</TableHead>
@@ -2002,9 +2003,10 @@ const ReportsPage = () => {
                           <TableCell className="font-medium">{r.name}</TableCell>
                           <TableCell className="text-xs">{r.creator}</TableCell>
                           <TableCell className="text-right">{r.members}</TableCell>
+                          <TableCell className="text-right">{r.newMembers}</TableCell>
                           <TableCell className="text-right">{r.orders}</TableCell>
                           <TableCell className="text-right font-semibold">{r.revenue > 0 ? fmt(r.revenue) : "—"}</TableCell>
-                          <TableCell className="text-right">{r.profit > 0 ? fmt(r.profit) : "—"}</TableCell>
+                          <TableCell className="text-right">{r.profit !== 0 ? fmt(r.profit) : "—"}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
