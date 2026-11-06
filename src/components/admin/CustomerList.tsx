@@ -684,6 +684,30 @@ const CustomerList = ({ customers, orderSummaries, walletSummaries, onRefresh }:
         <Badge variant="outline" className="ml-auto">{filtered.length} customers</Badge>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3 border-y py-3">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="select-customer-page"
+            checked={currentPageSelected}
+            onCheckedChange={(checked) => togglePageSelection(checked === true)}
+            aria-label="Select all customers on this page"
+          />
+          <Label htmlFor="select-customer-page" className="text-sm">Select this page</Label>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={() => setSelectedCustomerIds(new Set(filtered.map((customer) => customer.user_id)))}>
+          Select all filtered ({filtered.length})
+        </Button>
+        <Button type="button" variant="ghost" size="sm" disabled={selectedCustomerIds.size === 0} onClick={() => setSelectedCustomerIds(new Set())}>
+          Clear selection
+        </Button>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">{selectedCustomerIds.size} selected</span>
+          <Button type="button" size="sm" disabled={selectedCustomerIds.size === 0} onClick={beginBulkMessaging}>
+            <MessageCircle className="mr-2 h-4 w-4" /> Message selected
+          </Button>
+        </div>
+      </div>
+
       {/* Mobile: tap-to-expand cards */}
       <div className="space-y-2 md:hidden">
         {paginatedCustomers.map((c) => {
@@ -702,6 +726,12 @@ const CustomerList = ({ customers, orderSummaries, walletSummaries, onRefresh }:
                   <div className="text-xs text-muted-foreground">{c.mobile_number ?? "—"}</div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  <Checkbox
+                    checked={selectedCustomerIds.has(c.user_id)}
+                    onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
+                    onCheckedChange={(checked) => toggleCustomerSelection(c.user_id, checked === true)}
+                    aria-label={`Select ${c.full_name ?? "customer"}`}
+                  />
                   <WhatsAppChatButton name={c.full_name} mobile={c.mobile_number} />
                   {getStatusBadge(c)}
                   <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90" />
@@ -741,6 +771,13 @@ const CustomerList = ({ customers, orderSummaries, walletSummaries, onRefresh }:
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>
+                <Checkbox
+                  checked={currentPageSelected}
+                  onCheckedChange={(checked) => togglePageSelection(checked === true)}
+                  aria-label="Select all customers on this page"
+                />
+              </TableHead>
               <TableHead>#</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Mobile</TableHead>
@@ -764,6 +801,13 @@ const CustomerList = ({ customers, orderSummaries, walletSummaries, onRefresh }:
               const sh = searchHistories.get(c.user_id);
               return (
                 <TableRow key={c.id} className={c.is_blocked ? "bg-destructive/5" : undefined}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedCustomerIds.has(c.user_id)}
+                      onCheckedChange={(checked) => toggleCustomerSelection(c.user_id, checked === true)}
+                      aria-label={`Select ${c.full_name ?? "customer"}`}
+                    />
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{(currentPage - 1) * pageSize + i + 1}</TableCell>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-1.5">
@@ -867,7 +911,7 @@ const CustomerList = ({ customers, orderSummaries, walletSummaries, onRefresh }:
             })}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={14} className="text-center text-muted-foreground py-8">No customers found</TableCell>
+                <TableCell colSpan={15} className="text-center text-muted-foreground py-8">No customers found</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -909,6 +953,66 @@ const CustomerList = ({ customers, orderSummaries, walletSummaries, onRefresh }:
           </div>
         </div>
       )}
+
+      <Dialog open={bulkMessageOpen} onOpenChange={setBulkMessageOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" />
+              Message customers on WhatsApp
+            </DialogTitle>
+          </DialogHeader>
+          {bulkRecipients[bulkRecipientIndex] && (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <p className="font-medium">{bulkRecipients[bulkRecipientIndex].full_name || "Customer"}</p>
+                <p className="text-sm text-muted-foreground">{bulkRecipients[bulkRecipientIndex].mobile_number}</p>
+                <p className="text-xs text-muted-foreground">
+                  Customer {bulkRecipientIndex + 1} of {bulkRecipients.length}
+                  {bulkSkippedCount > 0 ? ` · ${bulkSkippedCount} selected without a valid WhatsApp number will be skipped` : ""}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {WHATSAPP_MESSAGE_TEMPLATES.map((template) => (
+                  <Button key={template.label} type="button" size="sm" variant="outline" onClick={() => setBulkMessage(template.text("{{name}}"))}>
+                    {template.label}
+                  </Button>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="bulk-whatsapp-message">Message</Label>
+                <Textarea id="bulk-whatsapp-message" rows={5} value={bulkMessage} onChange={(event) => setBulkMessage(event.target.value)} />
+                <p className="text-xs text-muted-foreground">{{name}} is replaced with each customer's name. WhatsApp opens one chat at a time; press send there.</p>
+              </div>
+            </div>
+          )}
+          <div className="flex flex-wrap justify-between gap-2">
+            <Button type="button" variant="outline" onClick={() => setBulkMessageOpen(false)}>Stop</Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={advanceBulkRecipient}>Skip customer</Button>
+              {!bulkCurrentOpened ? (
+                <Button
+                  type="button"
+                  disabled={!bulkMessage.trim() || !bulkRecipients[bulkRecipientIndex]}
+                  onClick={() => {
+                    const recipient = bulkRecipients[bulkRecipientIndex];
+                    if (!recipient) return;
+                    const personalized = personalizeBulkWhatsAppMessage(bulkMessage.trim(), recipient.full_name);
+                    window.open(whatsappChatLink(recipient.whatsappDigits, personalized), "_blank", "noopener");
+                    setBulkCurrentOpened(true);
+                  }}
+                >
+                  <MessageCircle className="mr-2 h-4 w-4" /> Open WhatsApp
+                </Button>
+              ) : (
+                <Button type="button" onClick={advanceBulkRecipient}>
+                  {bulkRecipientIndex === bulkRecipients.length - 1 ? "Finish" : "Next customer"}
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Search History Detail Dialog */}
       <Dialog open={searchDetailOpen} onOpenChange={setSearchDetailOpen}>
