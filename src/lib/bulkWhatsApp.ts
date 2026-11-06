@@ -19,7 +19,7 @@ export const WHATSAPP_MESSAGE_TEMPLATES: WhatsAppMessageTemplate[] = [
 ];
 
 export const personalizeBulkWhatsAppMessage = (message: string, name: string | null): string =>
-  message.replaceAll("{{name}}", name?.trim() || "there");
+  message.split("{{name}}").join(name?.trim() || "there");
 
 export const buildBulkWhatsAppQueue = <T extends BulkWhatsAppCustomer>(
   selectedUserIds: readonly string[],
