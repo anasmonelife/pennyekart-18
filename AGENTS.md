@@ -2,6 +2,7 @@
 
 - Resolve community eligibility on the server from protected user_roles with a legacy-role fallback; approve requests atomically in a super-admin-checked RPC, and synchronize existing administrator role changes so grants cannot diverge.
 - Keep community access requests separate from membership invitations; the profile wrapper gates the existing community card and the active admin Communities page hosts the review queue.
+- Keep community access-request search/status filtering in the admin table and generate CSV from the currently visible rows through a testable export helper.
 - Block community invitations to community creators inside the invite and invite-acceptance database functions, so nobody can be pulled from owning one community into another (checks live in `invite_to_community` / `respond_to_community_invite`).
 - Accepting a community invitation requires only a verified account and not belonging to (or owning) another community; the Coordinator/Group Leader/Pro role gate applies to creating or requesting a community, never to joining one through an invite (enforced in `respond_to_community_invite`).
 

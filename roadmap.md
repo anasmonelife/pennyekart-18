@@ -45,7 +45,7 @@
 - [ ] Add date-period details to the customer wallet Sales Commission tab; confirm the commission table permissions.
 
 ## Admin access request area details
-- [ ] Show each community access request's panchayath and ward on /admin/communities → Access requests so admins can identify the requester.
+- [x] Show panchayath and ward in a searchable, status-filtered table on /admin/communities → Access requests; export the visible rows as CSV.
 
 ## Communities commission allocation tab
 - [x] Show communities in each e-Life person's allocated area, calculate commission using saved role rates, persist period snapshots, and provide refresh, search, filters, and CSV export. Added checks for saved-snapshot loading and fresh calculation/save; focused tests pass.
