@@ -6,10 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Users, MapPin, ShoppingCart, Wallet, TrendingUp, CalendarDays, UserCheck, UserX, Activity, Download, Clock, Zap, Search, Phone, Ban, CheckCircle, UserPlus, Eye, ChevronLeft, ChevronRight, BadgeCheck } from "lucide-react";
+import { Users, MapPin, ShoppingCart, Wallet, TrendingUp, CalendarDays, UserCheck, UserX, Activity, Download, Clock, Zap, Search, Phone, Ban, CheckCircle, UserPlus, Eye, ChevronLeft, ChevronRight, BadgeCheck, MessageCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { whatsappChatLink } from "@/lib/appLinks";
+import { buildBulkWhatsAppQueue, personalizeBulkWhatsAppMessage, WHATSAPP_MESSAGE_TEMPLATES } from "@/lib/bulkWhatsApp";
 import { format, subDays, formatDistanceToNow, differenceInDays, differenceInHours } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -109,6 +114,13 @@ const CustomerList = ({ customers, orderSummaries, walletSummaries, onRefresh }:
   const [mobileSearch, setMobileSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
+  const [bulkMessageOpen, setBulkMessageOpen] = useState(false);
+  const [bulkMessage, setBulkMessage] = useState(WHATSAPP_MESSAGE_TEMPLATES[0].text("{{name}}"));
+  const [bulkRecipients, setBulkRecipients] = useState<(Profile & { whatsappDigits: string })[]>([]);
+  const [bulkSkippedCount, setBulkSkippedCount] = useState(0);
+  const [bulkRecipientIndex, setBulkRecipientIndex] = useState(0);
+  const [bulkCurrentOpened, setBulkCurrentOpened] = useState(false);
 
   // Fetch search histories for all customers
   useEffect(() => {
@@ -241,6 +253,57 @@ const CustomerList = ({ customers, orderSummaries, walletSummaries, onRefresh }:
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginatedCustomers = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const currentPageSelected = paginatedCustomers.length > 0 && paginatedCustomers.every((customer) => selectedCustomerIds.has(customer.user_id));
+
+  const toggleCustomerSelection = (userId: string, selected: boolean) => {
+    setSelectedCustomerIds((previous) => {
+      const next = new Set(previous);
+      if (selected) next.add(userId);
+      else next.delete(userId);
+      return next;
+    });
+  };
+
+  const togglePageSelection = (selected: boolean) => {
+    setSelectedCustomerIds((previous) => {
+      const next = new Set(previous);
+      paginatedCustomers.forEach((customer) => {
+        if (selected) next.add(customer.user_id);
+        else next.delete(customer.user_id);
+      });
+      return next;
+    });
+  };
+
+  const beginBulkMessaging = () => {
+    const { recipients, skippedCount } = buildBulkWhatsAppQueue(Array.from(selectedCustomerIds), customers);
+    if (recipients.length === 0) {
+      toast({ title: "No WhatsApp numbers available", description: "Select customers with valid mobile numbers to continue.", variant: "destructive" });
+      return;
+    }
+    setBulkRecipients(recipients);
+    setBulkSkippedCount(skippedCount);
+    setBulkRecipientIndex(0);
+    setBulkCurrentOpened(false);
+    setBulkMessageOpen(true);
+  };
+
+  const advanceBulkRecipient = () => {
+    const currentRecipient = bulkRecipients[bulkRecipientIndex];
+    if (!currentRecipient) return;
+    setSelectedCustomerIds((previous) => {
+      const next = new Set(previous);
+      next.delete(currentRecipient.user_id);
+      return next;
+    });
+    if (bulkRecipientIndex >= bulkRecipients.length - 1) {
+      setBulkMessageOpen(false);
+      setBulkRecipients([]);
+      return;
+    }
+    setBulkRecipientIndex((index) => index + 1);
+    setBulkCurrentOpened(false);
+  };
 
   // Activity counts (respecting location filters)
   const activityCounts = useMemo(() => {
